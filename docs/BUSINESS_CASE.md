@@ -1,63 +1,128 @@
 # Signaly — Business Case
 
-> **AI-Assisted Operational Intelligence for Faster, Evidence-Grounded Decisions**
+> **From operational noise to evidence-grounded action.**
 
 | | |
 |---|---|
 | **Project** | Signaly |
 | **Document** | Business Case |
 | **Milestone** | 0 — Product Foundation |
-| **Status** | Complete |
 | **Version** | 1.0 |
+| **Status** | Complete |
 
 ---
 
-## 1. Business Problem
+## 1. The Problem
 
-Modern digital services generate thousands of operational signals across application logs, monitoring platforms, APIs, infrastructure and customer-support systems.
+Modern digital services continuously generate information from applications, APIs, cloud infrastructure, monitoring tools, deployments and customer-support systems.
 
-The problem is not the absence of information.
+We call each useful piece of this information an **operational signal**.
 
-**The problem is turning that information into a reliable decision quickly.**
+An operational signal is simply:
 
-When an operational issue occurs, an analyst may need to:
+> **An event or observation that tells us something has happened — or may be going wrong — within a digital service.**
 
-1. inspect the original alert;
-2. search logs and monitoring systems;
-3. identify related events;
-4. determine which services are affected;
-5. assess severity and priority;
-6. decide what should happen next.
+Examples include:
 
-This creates three important business problems:
+- an API becoming unusually slow;
+- payment failures increasing;
+- HTTP 500 errors appearing;
+- a database connection failing;
+- CPU usage reaching 95%;
+- customers reporting that checkout is broken;
+- a service becoming unavailable;
+- a deployment occurring shortly before errors increase.
 
-- **Investigation overhead** — valuable engineering time is spent gathering and correlating information.
-- **Decision inconsistency** — prioritisation can depend heavily on individual experience.
-- **Alert fatigue** — important events can become difficult to distinguish from operational noise.
+The challenge is not generating more signals.
 
-As systems grow, simply generating more alerts does not solve the problem.
+The challenge is determining:
 
-Teams need help identifying **what matters, why it matters and what to do next**.
-
----
-
-## 2. Product Opportunity
-
-**Signaly** is an AI-assisted operational intelligence platform that transforms fragmented operational signals into **prioritised, evidence-grounded and explainable decision support**.
-
-Signaly sits between operational data sources and the people responsible for making decisions.
-
-Rather than replacing monitoring platforms, it adds an intelligence layer that helps operators answer:
-
-> **What is happening? How important is it? What evidence supports that conclusion? What should we do next?**
-
-### Core Value Proposition
-
-> **Less time investigating signals. More confidence deciding what matters.**
+> **Which signals belong together, what is happening, how important it is, what evidence supports the conclusion, and what should happen next?**
 
 ---
 
-## 3. How Signaly Works
+## 2. A Concrete Example
+
+Consider an online retailer.
+
+Shortly after a new checkout release, several systems begin reporting problems:
+
+| Time | Source | Operational Signal |
+|---|---|---|
+| 10:02 | Deployment | `checkout-service v2.4 deployed` |
+| 10:05 | API Monitoring | Checkout latency rises to `4.2 seconds` |
+| 10:06 | Application Logs | HTTP 500 errors increase |
+| 10:08 | Payment Service | Payment failure rate reaches `17.2%` |
+| 10:10 | Customer Support | Customers report failed payments |
+| 10:12 | Monitoring | Checkout degradation alert triggered |
+
+These signals may appear in different tools and initially look like separate problems.
+
+An operator must investigate them, determine whether they are related, assess the impact and decide what to do.
+
+That creates a correlation problem:
+
+```mermaid
+flowchart LR
+    A["Deployment<br/>10:02"] --> G["Possible Checkout Incident"]
+    B["High API Latency<br/>10:05"] --> G
+    C["HTTP 500 Errors<br/>10:06"] --> G
+    D["Payment Failures<br/>10:08"] --> G
+    E["Customer Complaints<br/>10:10"] --> G
+    F["Monitoring Alert<br/>10:12"] --> G
+
+    G --> H["What happened?"]
+    G --> I["How serious is it?"]
+    G --> J["What evidence supports it?"]
+    G --> K["What should we do next?"]
+```
+
+At scale, teams may have thousands of signals competing for attention.
+
+This creates:
+
+- **alert fatigue**;
+- repetitive manual investigation;
+- fragmented operational context;
+- inconsistent prioritisation;
+- slower incident response;
+- dependence on experienced operators.
+
+---
+
+## 3. The Signaly Opportunity
+
+**Signaly** is an AI-assisted operational intelligence platform designed to transform fragmented operational signals into:
+
+> **correlated, prioritised, evidence-grounded and explainable decision support.**
+
+Signaly does not aim to replace monitoring platforms.
+
+Instead, it provides an intelligence layer between operational data and the people responsible for making decisions.
+
+Using the checkout example, Signaly should eventually be capable of presenting something closer to:
+
+> ### Potential Checkout Incident — High Priority
+>
+> Payment failures increased shortly after the latest checkout deployment.
+>
+> API latency, HTTP 500 errors and customer complaints increased during the same period.
+>
+> **Supporting evidence:** deployment event, latency metrics, application errors, payment failures and customer reports.
+>
+> **Suggested next step:** investigate the latest checkout deployment and compare service behaviour before and after release.
+>
+> **Confidence:** High
+>
+> **Decision:** Human review required.
+
+The purpose is not simply to generate text.
+
+The purpose is to help an operator reach a **better-supported decision faster**.
+
+---
+
+## 4. How Signaly Works
 
 ```mermaid
 flowchart LR
@@ -65,189 +130,220 @@ flowchart LR
     B --> C["Enrich &<br/>Correlate"]
     C --> D["Assess<br/>Priority"]
     D --> E["Retrieve<br/>Evidence"]
-    E --> F["AI Summary &<br/>Recommendation"]
-    F --> G{"Human<br/>Review"}
+    E --> F["AI-Assisted<br/>Reasoning"]
+    F --> G["Recommendation<br/>+ Confidence"]
+    G --> H{"Human<br/>Review"}
 
-    G -->|Accept| H["Action"]
-    G -->|Modify| H
-    G -->|Reject| I["Record Decision"]
+    H -->|Accept| I["Action"]
+    H -->|Modify| I
+    H -->|Reject| J["Record Decision"]
 
-    H --> J["Feedback &<br/>Audit"]
-    I --> J
+    I --> K["Feedback & Audit"]
+    J --> K
 ```
 
-The workflow deliberately combines conventional software and AI.
+Signaly deliberately combines **traditional software, machine learning, retrieval and generative AI**.
 
-Deterministic components handle tasks such as validation, workflow state and auditability.
+AI will only be introduced where it provides measurable value.
 
-AI is introduced where it can add measurable value, including correlation, contextual understanding, evidence retrieval, summarisation and recommendation support.
-
-**Human operators remain responsible for consequential decisions.**
+Human operators remain responsible for consequential decisions.
 
 ---
 
-## 4. Who Is Signaly For?
+## 5. Who Benefits?
 
-The initial product is designed around operational teams responsible for maintaining digital services.
-
-| User | Current Challenge | Signaly Value |
+| User | Problem | Signaly Value |
 |---|---|---|
 | **Operations Analyst** | Repetitive investigation | Consolidated context and evidence |
-| **Incident Manager** | Inconsistent prioritisation | Structured priority assessment |
-| **Engineer** | Fragmented technical information | Relevant evidence in one workflow |
+| **Incident Manager** | Difficult prioritisation | Structured incident assessment |
+| **Engineer** | Information spread across systems | Relevant technical evidence |
 | **Service Owner** | Limited incident visibility | Clearer operational context |
-| **Technical Leadership** | Difficult-to-measure operational efficiency | Traceable decision and performance data |
+| **Technical Leadership** | Difficult-to-measure operational efficiency | Traceable performance and decision data |
 
 ---
 
-## 5. MVP Scope
+## 6. MVP Scope
 
-Signaly will begin with **one narrow but complete decision-support workflow**.
+The first version of Signaly will focus on **one complete workflow**:
 
 > **Signal → Context → Correlation → Priority → Evidence → Recommendation → Human Decision → Feedback**
 
 ### The MVP Will
 
 - ingest structured operational signals;
-- validate and normalise incoming events;
+- validate and normalise events;
 - enrich events with relevant context;
 - identify potentially related signals;
-- estimate operational priority;
+- assess operational priority;
 - retrieve supporting evidence;
 - generate evidence-grounded summaries;
 - recommend possible next actions;
 - communicate confidence or uncertainty;
-- allow a human to accept, modify or reject recommendations;
+- allow recommendations to be accepted, modified or rejected;
 - maintain an auditable decision record.
 
 ### The MVP Will Not
 
-Signaly will **not initially**:
+Signaly will not initially:
 
 - replace existing observability platforms;
 - automatically remediate production infrastructure;
 - operate unrestricted autonomous agents;
 - guarantee root-cause identification;
 - remove humans from consequential decisions;
-- attempt to reproduce a full commercial incident-management platform.
+- attempt to reproduce an entire commercial incident-management platform.
 
-This boundary keeps the first implementation **focused, testable and achievable**.
+This keeps the MVP **focused, testable and achievable**.
 
 ---
 
-## 6. Business Hypothesis
+## 7. Business Hypothesis
 
-The project is built around one primary hypothesis:
+Signaly is built around one primary hypothesis:
 
 > **Providing operators with correlated, contextualised and evidence-grounded AI assistance can reduce investigation effort while maintaining or improving decision quality.**
 
-Signaly must therefore prove more than its ability to generate convincing AI responses.
+This hypothesis must be tested.
 
-It must demonstrate measurable operational value.
+A convincing AI response alone will **not** be considered evidence that Signaly works.
 
 ---
 
-## 7. How We Will Measure Value
+## 8. Data & Validation Strategy
 
-The MVP will be evaluated against a defined baseline representing the same workflow **without Signaly assistance**.
+Signaly requires data to demonstrate whether its approach actually works.
 
-| Evaluation Area | Key Question |
-|---|---|
-| **Investigation Effort** | Does Signaly reduce the time or steps required to investigate an event? |
-| **Prioritisation** | Does Signaly correctly identify important events? |
-| **Correlation** | Can Signaly correctly associate related signals? |
-| **Evidence Grounding** | Are AI conclusions supported by available evidence? |
-| **Recommendation Quality** | Are suggested actions relevant and useful? |
-| **Uncertainty** | Does the system communicate when confidence is limited? |
-| **Reliability** | Does the workflow remain predictable when AI components fail? |
+The initial project will use **labelled synthetic operational scenarios** where the correct incident relationships are known.
 
-Specific metrics, datasets, thresholds and experimental procedures will be defined separately in:
+For example, a checkout scenario may contain:
+
+- related deployment events;
+- latency changes;
+- application errors;
+- payment failures;
+- customer complaints;
+- unrelated background signals.
+
+Because the expected relationships are known, Signaly's output can be compared against **ground truth**.
+
+As the project develops, appropriate public observability datasets may also be introduced to test the system against more realistic telemetry.
+
+This creates an evidence chain:
+
+```mermaid
+flowchart LR
+    A["Operational<br/>Dataset"] --> B["Known<br/>Incidents"]
+    B --> C["Signaly"]
+    C --> D["Predicted<br/>Incidents"]
+    D --> E["Compare With<br/>Ground Truth"]
+    E --> F["Evaluation<br/>Metrics"]
+```
+
+The detailed dataset, benchmark and experimental methodology will be defined in:
 
 `docs/EVALUATION_DESIGN.md`
 
-This prevents proposed targets from being confused with achieved results.
+---
+
+## 9. How We Will Measure Value
+
+The Signaly-assisted workflow will be compared with a defined baseline.
+
+| Evaluation Area | Question |
+|---|---|
+| **Investigation Effort** | Does Signaly reduce investigation time or steps? |
+| **Critical-Event Detection** | Does Signaly correctly surface important events? |
+| **Correlation Quality** | Does it correctly associate related signals? |
+| **Prioritisation** | Are important incidents ranked appropriately? |
+| **Evidence Grounding** | Are AI conclusions supported by available evidence? |
+| **Recommendation Quality** | Are suggested actions relevant and useful? |
+| **Uncertainty** | Does Signaly recognise when confidence is limited? |
+| **Reliability** | What happens when an AI component fails? |
+
+Specific metrics and thresholds will be established during evaluation design rather than claimed before experiments have been performed.
 
 ---
 
-## 8. Product Principles
+## 10. Product Principles
 
-Five principles guide Signaly's design.
+Signaly will follow five core principles.
 
-### 1. Evidence Before Generation
+### Evidence Before Generation
 
-AI outputs should be grounded in available operational evidence rather than generated from context-free prompts.
+AI-generated conclusions should be grounded in available operational evidence.
 
-### 2. Human Control
+### Human Control
 
 AI provides decision support. Humans retain authority over consequential actions.
 
-### 3. AI Where It Adds Value
+### AI Where It Adds Value
 
-Not every problem requires AI. Deterministic software should be preferred when deterministic logic is sufficient.
+Deterministic software should be preferred when deterministic logic is sufficient.
 
-### 4. Measurable Improvement
+### Measurable Improvement
 
-An AI feature is valuable only if its contribution can be evaluated against an appropriate baseline.
+AI capabilities must demonstrate value against an appropriate baseline.
 
-### 5. Traceability
+### Traceability
 
-Important signals, evidence, recommendations and human decisions should be auditable.
+Important signals, evidence, recommendations and human decisions should remain auditable.
 
 ---
 
-## 9. Key Risks
+## 11. Key Risks
 
 | Risk | Design Response |
 |---|---|
 | AI generates unsupported information | Evidence grounding and output validation |
-| Important signal receives low priority | Human review and priority evaluation |
-| Unrelated events are incorrectly correlated | Correlation evaluation against labelled scenarios |
-| Users over-trust AI recommendations | Evidence and uncertainty displayed with recommendations |
-| AI service becomes unavailable | Graceful fallback to deterministic workflow |
+| Important event receives low priority | Human review and priority evaluation |
+| Unrelated signals are incorrectly correlated | Ground-truth correlation testing |
+| Users over-trust AI | Evidence and uncertainty shown with recommendations |
+| AI component becomes unavailable | Graceful deterministic fallback |
 | Poor input data affects decisions | Schema validation and data-quality checks |
 
-These risks will influence both the architecture and evaluation strategy.
+These risks will influence the architecture, AI design and evaluation strategy.
 
 ---
 
-## 10. Success Definition
+## 12. Success Definition
 
-The Signaly MVP succeeds if it demonstrates a **complete and reproducible operational decision-support workflow** that:
+The Signaly MVP succeeds if it demonstrates a **complete, reproducible and measurable operational decision-support workflow**.
 
-- reduces unnecessary investigation effort;
-- provides useful contextual evidence;
-- supports reliable prioritisation;
-- produces evidence-grounded AI outputs;
-- communicates uncertainty;
-- preserves human oversight;
-- records decisions for later evaluation and audit.
+It should provide evidence that Signaly can:
 
-A system that merely produces convincing AI-generated text **does not satisfy the success criteria**.
+- reduce unnecessary investigation effort;
+- correctly associate useful operational signals;
+- support meaningful prioritisation;
+- retrieve relevant evidence;
+- produce evidence-grounded AI outputs;
+- communicate uncertainty;
+- preserve human oversight;
+- maintain traceable decisions.
 
-The project must produce evidence that the technology improves at least one meaningful part of the operational workflow without introducing unacceptable risk elsewhere.
+> **Generating convincing AI text is not success. Demonstrating measurable decision-support value is.**
 
 ---
 
-## 11. Business Decision
+## 13. Business Decision
 
-### **Decision: PROCEED**
+### **PROCEED**
 
-The problem is sufficiently defined to justify an MVP.
+The project now has:
 
-The proposed solution has:
-
-- a clear user;
-- a defined operational problem;
-- a bounded product scope;
-- measurable hypotheses;
-- identifiable risks;
+- a clearly defined problem;
+- identifiable users;
+- a concrete use case;
+- a bounded MVP;
+- a measurable hypothesis;
+- a validation strategy;
+- known risks;
 - explicit success criteria.
 
-The next stage is to translate this business case into **testable product and engineering requirements**.
+The next stage will translate this business case into **testable system requirements**.
 
 ---
 
-## 12. Milestone 0 Roadmap
+## Milestone 0
 
 ```mermaid
 flowchart LR
@@ -260,13 +356,12 @@ flowchart LR
     G --> H["Milestone 1<br/>Build"]
 ```
 
-### Next Document
+### Next
 
 **`docs/REQUIREMENTS.md`**
 
-The requirements phase will define exactly **what Signaly must do** before implementation decisions are made.
+The requirements document will define exactly **what Signaly must do** before we decide exactly **how it will be built**.
 
 ---
 
-> **Signaly**  
-> *From operational noise to evidence-grounded action.*
+> **Signaly** — *From operational noise to evidence-grounded action.*
