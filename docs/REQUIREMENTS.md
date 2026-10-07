@@ -1,378 +1,1463 @@
-# Signaly — MVP Requirements
+# Sigvora — System Requirements Specification
 
-> **From operational noise to evidence-grounded action.**
-
-| | |
-|---|---|
-| **Project** | Signaly |
-| **Document** | MVP Requirements |
-| **Milestone** | 0 — Product Foundation |
-| **Version** | 1.0 |
-| **Status** | Baseline |
-| **Source** | `docs/BUSINESS_CASE.md` |
+> **Document Status:** Product Foundation  
+> **Version:** 0.1.0  
+> **Project:** Sigvora  
+> **Product Category:** Trustworthy AI Customer-Request Intelligence Platform  
+> **Initial Demonstration Domain:** Fictional UK Financial Services  
+> **Source:** `docs/BUSINESS_CASE.md`
 
 ---
 
-## 1. Purpose
+# 1. Purpose
 
-This document defines what the **Signaly MVP must do and prove**.
+This document translates the Sigvora business case into explicit,
+traceable and testable system requirements.
 
-Signaly is an AI-assisted operational intelligence platform that transforms fragmented operational signals into:
+The requirements define what Sigvora must achieve before implementation
+decisions are treated as final.
 
-> **correlated incidents, prioritised insights, supporting evidence and human-reviewed recommendations.**
+Sigvora is designed to transform an unstructured customer request into a
+structured, evidence-grounded and governable operational decision.
 
-These requirements intentionally define **what the system must achieve**, not which technologies must be used.
+The target workflow is:
 
-Technology choices will be justified later in the architecture and decision records.
-
----
-
-## 2. MVP Goal
-
-The MVP must demonstrate one complete decision-support workflow:
-
-```mermaid
-flowchart LR
-    A["Operational<br/>Signals"] --> B["Validate &<br/>Normalise"]
-    B --> C["Correlate<br/>Signals"]
-    C --> D["Assess<br/>Priority"]
-    D --> E["Retrieve<br/>Evidence"]
-    E --> F["Generate<br/>Insight"]
-    F --> G["Recommendation<br/>+ Confidence"]
-    G --> H{"Human<br/>Review"}
-    H --> I["Decision"]
-    I --> J["Feedback &<br/>Audit"]
-```
-
-### Example
-
-Given the following signals:
-
-- checkout deployment completed;
-- API latency increased;
-- HTTP 500 errors increased;
-- payment failures increased;
-- customers reported failed payments;
-
-Signaly should be capable of determining that these signals **may represent one operational incident**, gathering the relevant evidence and presenting the incident to an operator for review.
-
----
-
-# 3. Core Functional Requirements
-
-These requirements define the minimum end-to-end Signaly workflow.
-
-| ID | Requirement | Priority | Verification |
-|---|---|---|---|
-| **FR-001** | Accept structured operational signals through a defined ingestion interface. | Must | Integration Test |
-| **FR-002** | Validate incoming signals and reject or quarantine invalid data safely. | Must | Automated Test |
-| **FR-003** | Convert accepted signals into a consistent internal representation. | Must | Automated Test |
-| **FR-004** | Associate potentially related signals with an incident candidate. | Must | Benchmark |
-| **FR-005** | Assess the operational priority of an incident candidate. | Must | Benchmark |
-| **FR-006** | Retrieve evidence relevant to an incident. | Must | Retrieval Test |
-| **FR-007** | Generate an evidence-grounded incident summary. | Must | AI Evaluation |
-| **FR-008** | Recommend a possible next action when sufficient evidence exists. | Must | AI Evaluation |
-| **FR-009** | Display supporting evidence and confidence/uncertainty with the recommendation. | Must | Integration Test |
-| **FR-010** | Allow an operator to accept, modify or reject a recommendation. | Must | Integration Test |
-| **FR-011** | Record recommendations, evidence and human decisions for audit and evaluation. | Must | Integration Test |
-
----
-
-# 4. AI Trustworthiness Requirements
-
-AI is a component of Signaly — not the source of truth.
-
-| ID | Requirement | Verification |
-|---|---|---|
-| **AI-001** | Generated conclusions must be grounded in evidence available to Signaly. | Grounding Evaluation |
-| **AI-002** | Generated output must distinguish observed evidence from inferred conclusions. | AI Evaluation |
-| **AI-003** | Recommendations must expose the evidence used to support them. | Integration Test |
-| **AI-004** | Signaly must communicate uncertainty when available evidence is insufficient or conflicting. | Scenario Test |
-| **AI-005** | Machine-consumed AI outputs must use validated structured responses. | Schema Test |
-| **AI-006** | Failure of the AI component must not remove access to the underlying incident and evidence. | Failure Test |
-| **AI-007** | AI performance claims must be supported by recorded evaluation results. | Evaluation Evidence |
-
-### Design Principle
-
-> **Signaly should know when the available evidence is not strong enough to justify a confident recommendation.**
-
----
-
-# 5. Human Oversight
-
-Signaly is a **decision-support system**, not an autonomous remediation platform.
-
-| ID | Requirement |
-|---|---|
-| **HITL-001** | Consequential MVP recommendations require human review. |
-| **HITL-002** | Operators can inspect supporting evidence before deciding. |
-| **HITL-003** | Operators can accept, modify or reject recommendations. |
-| **HITL-004** | Human decisions are recorded as feedback for later evaluation. |
-
-The MVP therefore follows:
-
-```mermaid
-flowchart LR
-    A["AI Recommendation"] --> B["Evidence"]
-    B --> C["Confidence"]
-    C --> D{"Human Review"}
-
-    D -->|Accept| E["Approved"]
-    D -->|Modify| F["Modified"]
-    D -->|Reject| G["Rejected"]
-
-    E --> H["Audit & Feedback"]
-    F --> H
-    G --> H
+```text
+Customer Request
+       ↓
+Request Understanding
+       ↓
+Signal Extraction
+       ↓
+Risk & Priority Assessment
+       ↓
+Knowledge Retrieval
+       ↓
+Evidence-Grounded Recommendation
+       ↓
+Routing
+       ↓
+Governance Decision
+       ↓
+Human Review / Controlled Action
+       ↓
+SLA Tracking
+       ↓
+Audit + Feedback
 ```
 
 ---
 
-# 6. Data Requirements
+# 2. Requirements Philosophy
 
-Signaly requires controlled data to test whether the system actually works.
+Sigvora will follow five requirements principles.
 
-### Minimum Signal Fields
+## 2.1 Traceability
 
-Every normalised signal must contain at least:
+Every major implementation capability should map to a requirement.
 
-| Field | Purpose |
+## 2.2 Testability
+
+A requirement should be written so that evidence can later demonstrate
+whether it has been satisfied.
+
+## 2.3 Risk Awareness
+
+Higher-risk decisions require stronger controls.
+
+## 2.4 AI Is Not the Default Solution
+
+Deterministic mechanisms should be preferred where AI is unnecessary.
+
+## 2.5 Safe Failure
+
+Failure of an AI component must not silently become an unsafe decision.
+
+---
+
+# 3. Requirement Priority
+
+Requirements use the following priority levels:
+
+| Priority | Meaning |
 |---|---|
-| `signal_id` | Unique signal identifier |
-| `timestamp` | When the event occurred |
-| `source` | System that produced the signal |
-| `service` | Affected service/component |
-| `signal_type` | Type of operational event |
-| `message` | Human-readable event description |
+| MUST | Required for the core Sigvora product |
+| SHOULD | Important but not required for the first vertical slice |
+| COULD | Valuable future enhancement |
+| OUT | Explicitly outside the current scope |
 
-Additional fields may include severity, environment, numeric values and metadata.
+---
 
-### Example
+# 4. Core Domain Objects
 
-```json
-{
-  "signal_id": "sig_001",
-  "timestamp": "2026-10-07T10:05:00Z",
-  "source": "api_monitoring",
-  "service": "checkout-service",
-  "signal_type": "latency",
-  "severity": "warning",
-  "message": "Checkout API latency exceeded normal range",
-  "value": 4200,
-  "unit": "ms"
-}
+Sigvora should model the following major objects:
+
+```text
+CustomerRequest
+      │
+      ├── Classification
+      ├── Signal
+      ├── RiskAssessment
+      ├── Priority
+      ├── Evidence
+      ├── Recommendation
+      ├── RoutingDecision
+      ├── GovernanceDecision
+      ├── SLA
+      ├── HumanDecision
+      └── AuditEvent
 ```
 
-### Evaluation Data Requirements
+These are logical domain concepts.
 
-| ID | Requirement |
-|---|---|
-| **DATA-001** | Evaluation scenarios must contain independently defined ground truth. |
-| **DATA-002** | Ground truth must identify related signals and known incidents where applicable. |
-| **DATA-003** | Evaluation data must contain unrelated/noise signals. |
-| **DATA-004** | Synthetic datasets must be reproducible from controlled configuration or seeds. |
-| **DATA-005** | Results must clearly distinguish synthetic, public and real-world data sources. |
+Their exact implementation will be determined during architecture design.
 
 ---
 
-# 7. Reliability & Failure Behaviour
+# 5. Request Ingestion Requirements
 
-A trustworthy decision-support system must remain useful when individual components fail.
+### FR-001 — Create Customer Request
 
-| ID | Requirement |
-|---|---|
-| **REL-001** | Invalid signals must not crash the processing pipeline. |
-| **REL-002** | Failure of an AI provider must not destroy or hide incident evidence. |
-| **REL-003** | Insufficient evidence must result in uncertainty or escalation rather than fabricated certainty. |
-| **REL-004** | Processing failures must produce diagnosable error information. |
+**Priority:** MUST
 
-### Safe Failure Path
+The system shall accept a customer request containing, at minimum:
 
-```mermaid
-flowchart TD
-    A["Incoming Signal"] --> B{"Valid?"}
+- request text;
+- submission timestamp;
+- channel;
+- and request identifier.
 
-    B -->|No| C["Reject / Quarantine"]
-    B -->|Yes| D["Process Signal"]
+**Acceptance evidence:**
 
-    D --> E{"Evidence<br/>Sufficient?"}
+A valid request can be submitted and receives a unique internal case ID.
 
-    E -->|No| F["Flag Uncertainty"]
-    E -->|Yes| G["Generate Analysis"]
+---
 
-    G --> H{"AI Available?"}
+### FR-002 — Request Validation
 
-    H -->|No| I["Preserve Evidence<br/>Human Review"]
-    H -->|Yes| J["Recommendation"]
+**Priority:** MUST
 
-    F --> K["Human Review"]
-    I --> K
-    J --> K
+The system shall validate incoming requests before AI processing.
+
+The system shall reject or safely handle:
+
+- missing request text;
+- malformed payloads;
+- unsupported formats;
+- and requests exceeding configured limits.
+
+---
+
+### FR-003 — Preserve Original Request
+
+**Priority:** MUST
+
+The original customer request shall remain available after downstream AI
+processing.
+
+AI-generated transformations shall not overwrite the original input.
+
+---
+
+### FR-004 — Request Status
+
+**Priority:** MUST
+
+Each request shall maintain a lifecycle status.
+
+Initial states should support at least:
+
+```text
+RECEIVED
+TRIAGING
+ROUTED
+IN_REVIEW
+RESOLVED
+CLOSED
 ```
 
-> **Signaly should fail safely rather than fail confidently.**
+---
+
+# 6. Request Understanding Requirements
+
+### FR-010 — Intent Classification
+
+**Priority:** MUST
+
+Sigvora shall determine the primary intent of a customer request.
+
+Initial categories should include:
+
+- account access;
+- card issue;
+- payment issue;
+- potential fraud;
+- complaint;
+- financial difficulty;
+- document / statement request;
+- privacy / data request;
+- technical support;
+- general enquiry;
+- unknown.
 
 ---
 
-# 8. Security & Governance
+### FR-011 — Structured Classification Output
 
-The MVP must establish secure engineering foundations even if it is not yet a production deployment.
+**Priority:** MUST
 
-| ID | Requirement |
-|---|---|
-| **SEC-001** | Inputs must be validated before processing. |
-| **SEC-002** | Secrets and credentials must never be committed to source control. |
-| **SEC-003** | Sensitive information must not be unnecessarily sent to external AI services. |
-| **SEC-004** | Significant AI recommendations and human decisions must be traceable. |
-| **SEC-005** | Production-style access controls must be introduced before exposing protected operational functionality. |
+Classification results shall use a defined schema rather than unrestricted
+free text.
 
----
+The result shall contain at least:
 
-# 9. Engineering Quality Requirements
-
-| ID | Requirement |
-|---|---|
-| **ENG-001** | Ingestion, correlation, prioritisation, retrieval and AI reasoning must remain logically separated. |
-| **ENG-002** | External providers should be accessed through replaceable interfaces where practical. |
-| **ENG-003** | Core behaviour must have automated tests. |
-| **ENG-004** | The repository must provide reproducible setup and execution instructions. |
-| **ENG-005** | The application must expose sufficient logs to diagnose failures. |
-| **ENG-006** | End-to-end processing latency must be measurable. |
-
-These requirements allow the project to evolve without prematurely introducing unnecessary infrastructure.
+```text
+category
+confidence
+model/version
+timestamp
+```
 
 ---
 
-# 10. Evaluation Requirements
+### FR-012 — Unknown Classification
 
-Signaly must be **measured**, not simply demonstrated.
+**Priority:** MUST
 
-| ID | What Must Be Evaluated |
-|---|---|
-| **EVAL-001** | Signal correlation performance |
-| **EVAL-002** | Critical-incident detection |
-| **EVAL-003** | Incident prioritisation |
-| **EVAL-004** | Evidence retrieval quality |
-| **EVAL-005** | AI summary grounding |
-| **EVAL-006** | Unsupported AI claims |
-| **EVAL-007** | End-to-end processing latency |
-| **EVAL-008** | Signaly-assisted workflow versus baseline |
+The system shall support an `UNKNOWN` or equivalent state when a reliable
+classification cannot be produced.
 
-Detailed metrics, datasets, thresholds and experimental methodology belong in:
-
-`docs/EVALUATION_DESIGN.md`
-
-Negative or inconclusive results must be reported rather than removed.
+The system shall not force every request into a known category.
 
 ---
 
-# 11. MVP Acceptance Criteria
+### FR-013 — Multi-Signal Requests
 
-The Signaly MVP is complete only when the following workflow can be demonstrated and evaluated:
+**Priority:** SHOULD
 
-- [ ] Structured operational signals can enter the system.
-- [ ] Invalid signals are handled safely.
-- [ ] Related signals can be grouped into incident candidates.
-- [ ] Incidents can be prioritised.
-- [ ] Relevant evidence can be retrieved.
-- [ ] An evidence-grounded summary can be generated.
-- [ ] A recommended action can be presented where appropriate.
-- [ ] Evidence and uncertainty are visible to the operator.
-- [ ] The operator can accept, modify or reject the recommendation.
-- [ ] The decision is recorded.
-- [ ] Core behaviour is covered by automated tests.
-- [ ] Evaluation can be reproduced.
+The system should identify secondary concerns when a request contains more
+than one operational issue.
+
+Example:
+
+> "My card was stolen and I also cannot access my account."
 
 ---
 
-# 12. Out of Scope for MVP
+# 7. Signal Extraction Requirements
 
-The following capabilities are deliberately excluded from the first implementation:
+### FR-020 — Signal Extraction
 
-- autonomous infrastructure remediation;
+**Priority:** MUST
+
+Sigvora shall extract decision-relevant signals from customer requests.
+
+Potential signals include:
+
+- suspected unauthorised transaction;
+- stolen card;
+- account-access problem;
+- monetary amount;
+- financial difficulty;
+- complaint;
+- privacy concern;
+- security concern;
+- deadline;
+- repeated service failure.
+
+---
+
+### FR-021 — Signal Provenance
+
+**Priority:** MUST
+
+Each extracted signal shall retain a relationship to the source request.
+
+Where practical, the system should retain the text span or evidence from
+which the signal was derived.
+
+---
+
+### FR-022 — Signal Confidence
+
+**Priority:** SHOULD
+
+AI-derived signals should include an associated confidence or equivalent
+uncertainty indicator where technically meaningful.
+
+---
+
+### FR-023 — Deterministic Signals
+
+**Priority:** SHOULD
+
+Signals that can be reliably identified using deterministic validation or
+business logic should not require an LLM solely for extraction.
+
+---
+
+# 8. Risk Requirements
+
+### RISK-001 — Risk Assessment
+
+**Priority:** MUST
+
+Sigvora shall assign an operational risk level to a request.
+
+Initial levels:
+
+```text
+LOW
+MEDIUM
+HIGH
+CRITICAL
+```
+
+---
+
+### RISK-002 — Risk Factors
+
+**Priority:** MUST
+
+Risk assessment shall consider explicit factors rather than relying only
+on unrestricted LLM judgement.
+
+Factors may include:
+
+- financial exposure;
+- potential customer harm;
+- security impact;
+- privacy impact;
+- vulnerability indicators;
+- urgency;
+- and service impact.
+
+---
+
+### RISK-003 — Risk Explanation
+
+**Priority:** MUST
+
+The system shall retain the primary factors that contributed to a risk
+decision.
+
+---
+
+### RISK-004 — Risk and Sentiment Separation
+
+**Priority:** MUST
+
+The system shall not treat negative sentiment as sufficient evidence of
+high operational risk.
+
+---
+
+### RISK-005 — Configurable Risk Rules
+
+**Priority:** SHOULD
+
+Deterministic risk rules should be configurable without requiring changes
+to LLM prompts.
+
+---
+
+# 9. Priority Requirements
+
+### PRI-001 — Priority Assignment
+
+**Priority:** MUST
+
+Each request shall receive an operational priority.
+
+Initial levels:
+
+```text
+P1 — Critical
+P2 — High
+P3 — Normal
+P4 — Low
+```
+
+---
+
+### PRI-002 — Priority Factors
+
+**Priority:** MUST
+
+Priority shall be derived from relevant factors such as:
+
+- risk;
+- urgency;
+- potential impact;
+- request type;
+- and applicable service rules.
+
+---
+
+### PRI-003 — Priority Explanation
+
+**Priority:** MUST
+
+The system shall retain the reason for the assigned priority.
+
+---
+
+### PRI-004 — Priority Override
+
+**Priority:** MUST
+
+An authorised human user shall be able to override an AI/system-assigned
+priority.
+
+The override shall create an audit event.
+
+---
+
+# 10. Knowledge and RAG Requirements
+
+### RAG-001 — Approved Knowledge Store
+
+**Priority:** MUST
+
+Sigvora shall maintain a controlled knowledge collection used for
+retrieval.
+
+Initial knowledge may include synthetic:
+
+- policies;
+- procedures;
+- SLA guidance;
+- escalation rules;
+- and customer-service knowledge articles.
+
+---
+
+### RAG-002 — Knowledge Provenance
+
+**Priority:** MUST
+
+Every retrieved knowledge item shall retain source metadata.
+
+At minimum:
+
+```text
+document identifier
+title
+version where available
+retrieval timestamp
+```
+
+---
+
+### RAG-003 — Relevant Evidence Retrieval
+
+**Priority:** MUST
+
+The system shall retrieve knowledge relevant to the current request before
+generating policy-dependent recommendations.
+
+---
+
+### RAG-004 — Evidence Visibility
+
+**Priority:** MUST
+
+Users shall be able to identify which knowledge sources supported a
+recommendation.
+
+---
+
+### RAG-005 — No-Evidence Behaviour
+
+**Priority:** MUST
+
+If no sufficiently relevant evidence is retrieved, Sigvora shall not
+invent organisational policy.
+
+The system shall instead:
+
+- abstain;
+- request human review;
+- or clearly state that supporting knowledge was unavailable.
+
+---
+
+### RAG-006 — Evidence Relevance
+
+**Priority:** MUST
+
+Retrieved evidence shall include a relevance score or equivalent ranking
+signal where supported by the retrieval architecture.
+
+---
+
+### RAG-007 — Knowledge Versioning
+
+**Priority:** SHOULD
+
+The system should support version metadata for organisational knowledge so
+that decisions can later be traced to the knowledge available at the time.
+
+---
+
+# 11. Recommendation Requirements
+
+### REC-001 — Recommendation Generation
+
+**Priority:** MUST
+
+Sigvora shall generate a structured recommended next step when sufficient
+evidence exists.
+
+---
+
+### REC-002 — Recommendation Schema
+
+**Priority:** MUST
+
+A recommendation shall contain at least:
+
+```text
+recommended_action
+reason
+supporting_evidence
+uncertainty
+governance_status
+```
+
+---
+
+### REC-003 — Evidence Support
+
+**Priority:** MUST
+
+Policy-dependent recommendations shall reference supporting retrieved
+evidence.
+
+---
+
+### REC-004 — Unsupported Claims
+
+**Priority:** MUST
+
+The system shall be designed to minimise unsupported claims and enable
+their measurement during evaluation.
+
+---
+
+### REC-005 — Alternative Action
+
+**Priority:** SHOULD
+
+Where multiple reasonable next steps exist, Sigvora should be capable of
+presenting an alternative rather than falsely implying that only one
+action is possible.
+
+---
+
+# 12. Routing Requirements
+
+### ROUTE-001 — Routing Decision
+
+**Priority:** MUST
+
+Sigvora shall recommend an operational destination for a request.
+
+Initial destinations may include:
+
+- Customer Support;
+- Digital Support;
+- Payments Investigation;
+- Fraud / Card Security;
+- Complaints;
+- Financial Support;
+- Privacy / Data;
+- Human Triage.
+
+---
+
+### ROUTE-002 — Routing Explanation
+
+**Priority:** MUST
+
+Routing decisions shall include the primary reason for the selected
+destination.
+
+---
+
+### ROUTE-003 — Low-Confidence Routing
+
+**Priority:** MUST
+
+Requests with insufficient routing confidence shall be sent to human
+triage rather than silently routed to an arbitrary team.
+
+---
+
+### ROUTE-004 — Human Rerouting
+
+**Priority:** MUST
+
+Authorised users shall be able to reroute a request.
+
+The original and updated routing decisions shall remain auditable.
+
+---
+
+# 13. RSG Governance Requirements
+
+RSG represents:
+
+```text
+RISK
+What could go wrong?
+
+SIGNAL
+What important information do we observe?
+
+GOVERNANCE
+What is the system permitted to do?
+```
+
+---
+
+### GOV-001 — Governance Evaluation
+
+**Priority:** MUST
+
+A governance decision shall be produced before an AI-recommended
+operational action is executed.
+
+---
+
+### GOV-002 — Governance Outcomes
+
+**Priority:** MUST
+
+The system shall support at least:
+
+```text
+ALLOW
+REVIEW
+ESCALATE
+ABSTAIN
+```
+
+---
+
+### GOV-003 — Risk-Sensitive Authority
+
+**Priority:** MUST
+
+Higher-risk requests shall not automatically receive greater AI authority.
+
+Governance controls shall be capable of restricting automation as risk
+increases.
+
+---
+
+### GOV-004 — Governance Independence
+
+**Priority:** MUST
+
+Governance decisions shall not depend solely on the LLM's own statement
+that an action is safe.
+
+---
+
+### GOV-005 — Human Approval
+
+**Priority:** MUST
+
+Actions classified as requiring human approval shall not be marked as
+authorised until an authorised user explicitly approves them.
+
+---
+
+### GOV-006 — Governance Reason
+
+**Priority:** MUST
+
+Every governance outcome shall record its reason.
+
+---
+
+# 14. Uncertainty and Abstention Requirements
+
+### TAI-001 — Uncertainty Representation
+
+**Priority:** MUST
+
+Sigvora shall explicitly represent uncertainty when relevant information
+is missing, ambiguous or conflicting.
+
+---
+
+### TAI-002 — Abstention
+
+**Priority:** MUST
+
+The system shall be capable of declining to produce a definitive
+recommendation.
+
+---
+
+### TAI-003 — Missing Evidence
+
+**Priority:** MUST
+
+Missing supporting knowledge shall be treated as a decision condition, not
+silently ignored.
+
+---
+
+### TAI-004 — Conflicting Evidence
+
+**Priority:** MUST
+
+Where retrieved sources materially conflict, the system shall expose the
+conflict and require appropriate review.
+
+---
+
+### TAI-005 — Confidence Is Not Authority
+
+**Priority:** MUST
+
+A high model confidence score shall not independently authorise a
+high-impact action.
+
+---
+
+# 15. Human-in-the-Loop Requirements
+
+### HITL-001 — Review Queue
+
+**Priority:** MUST
+
+Sigvora shall provide a mechanism for requests requiring human review.
+
+---
+
+### HITL-002 — Human Decision
+
+**Priority:** MUST
+
+An authorised reviewer shall be able to:
+
+- approve;
+- reject;
+- modify;
+- reroute;
+- or escalate
+
+a recommendation where applicable.
+
+---
+
+### HITL-003 — Human Reason
+
+**Priority:** SHOULD
+
+The system should allow reviewers to record a reason when overriding an AI
+decision.
+
+---
+
+### HITL-004 — Preserve AI Decision
+
+**Priority:** MUST
+
+Human modification shall not erase the original AI recommendation.
+
+Both shall remain available for audit and evaluation.
+
+---
+
+# 16. SLA Requirements
+
+### SLA-001 — SLA Assignment
+
+**Priority:** MUST
+
+Sigvora shall associate applicable service expectations with a request
+based on configured business rules.
+
+---
+
+### SLA-002 — Deadline Calculation
+
+**Priority:** MUST
+
+The system shall calculate an SLA deadline where applicable.
+
+---
+
+### SLA-003 — SLA State
+
+**Priority:** MUST
+
+The system shall support at least:
+
+```text
+ON_TRACK
+AT_RISK
+BREACHED
+```
+
+---
+
+### SLA-004 — Escalation
+
+**Priority:** SHOULD
+
+The system should surface requests approaching or exceeding their service
+target.
+
+---
+
+### SLA-005 — SLA Independence
+
+**Priority:** MUST
+
+SLA calculations shall be deterministic and shall not depend on an LLM for
+basic time arithmetic.
+
+---
+
+# 17. Audit Requirements
+
+### AUD-001 — Decision Audit Trail
+
+**Priority:** MUST
+
+Important lifecycle events shall generate audit records.
+
+Examples include:
+
+- request creation;
+- classification;
+- risk assignment;
+- priority assignment;
+- evidence retrieval;
+- recommendation;
+- routing;
+- governance decision;
+- human override;
+- SLA escalation;
+- resolution.
+
+---
+
+### AUD-002 — Audit Immutability
+
+**Priority:** MUST
+
+Application users shall not be able to silently overwrite historical audit
+events.
+
+---
+
+### AUD-003 — AI Metadata
+
+**Priority:** MUST
+
+Where applicable, AI-generated decisions shall retain metadata such as:
+
+- model/provider identifier;
+- model version where available;
+- prompt/workflow version;
+- timestamp;
+- and processing outcome.
+
+---
+
+### AUD-004 — Decision Reconstruction
+
+**Priority:** SHOULD
+
+The audit trail should contain sufficient information to reconstruct the
+major factors influencing a historical decision.
+
+---
+
+# 18. Security Requirements
+
+### SEC-001 — Authentication
+
+**Priority:** MUST
+
+Protected application functionality shall require authenticated access.
+
+---
+
+### SEC-002 — Authorisation
+
+**Priority:** MUST
+
+Sensitive actions shall be restricted according to user role or
+permission.
+
+---
+
+### SEC-003 — Secret Management
+
+**Priority:** MUST
+
+API keys, credentials and secrets shall not be committed to the source
+repository.
+
+---
+
+### SEC-004 — Input Validation
+
+**Priority:** MUST
+
+User-controlled input shall be validated before downstream processing.
+
+---
+
+### SEC-005 — Data Minimisation
+
+**Priority:** MUST
+
+The portfolio shall avoid unnecessary collection or storage of sensitive
+customer information.
+
+---
+
+### SEC-006 — Synthetic Portfolio Data
+
+**Priority:** MUST
+
+Demonstration customer data shall be synthetic, fictional, anonymised or
+appropriately licensed.
+
+---
+
+### SEC-007 — Prompt Injection Defence
+
+**Priority:** MUST
+
+Retrieved documents and customer text shall be treated as untrusted input
+to the AI pipeline.
+
+The architecture shall include controls designed to reduce instruction
+injection and unauthorised tool/action execution.
+
+---
+
+# 19. Reliability Requirements
+
+### REL-001 — AI Provider Failure
+
+**Priority:** MUST
+
+Failure of an AI provider shall not cause an incoming request to disappear.
+
+---
+
+### REL-002 — Retrieval Failure
+
+**Priority:** MUST
+
+Failure of the retrieval system shall produce a safe failure state rather
+than an unsupported policy recommendation.
+
+---
+
+### REL-003 — Retry Safety
+
+**Priority:** SHOULD
+
+Retryable operations should be designed to avoid unintended duplicate
+processing.
+
+---
+
+### REL-004 — Graceful Degradation
+
+**Priority:** MUST
+
+Where AI functionality is unavailable, Sigvora shall preserve the request
+and make it available for human handling.
+
+---
+
+# 20. Observability Requirements
+
+### OBS-001 — Structured Logging
+
+**Priority:** MUST
+
+Backend services shall produce structured operational logs.
+
+---
+
+### OBS-002 — Request Correlation
+
+**Priority:** MUST
+
+Processing events for a customer request shall be traceable using a
+correlation or case identifier.
+
+---
+
+### OBS-003 — AI Observability
+
+**Priority:** MUST
+
+The system shall record operational information necessary to evaluate AI
+behaviour, including:
+
+- latency;
+- success/failure;
+- model/workflow identity;
+- retrieval results;
+- and governance outcome.
+
+---
+
+### OBS-004 — Error Visibility
+
+**Priority:** MUST
+
+Operational failures shall be visible rather than silently suppressed.
+
+---
+
+# 21. Performance Requirements
+
+### NFR-001 — Interactive Performance
+
+**Priority:** SHOULD
+
+The user interface should remain responsive while AI processing occurs.
+
+Long-running AI operations should not unnecessarily block unrelated UI
+interaction.
+
+---
+
+### NFR-002 — Measurable Latency
+
+**Priority:** MUST
+
+End-to-end processing latency shall be measurable.
+
+---
+
+### NFR-003 — Timeout Behaviour
+
+**Priority:** MUST
+
+External AI and retrieval calls shall have defined timeout behaviour.
+
+---
+
+# 22. API Requirements
+
+### API-001 — API-First Backend
+
+**Priority:** MUST
+
+Core Sigvora capabilities shall be accessible through documented backend
+APIs.
+
+---
+
+### API-002 — Schema Validation
+
+**Priority:** MUST
+
+API request and response bodies shall use explicit schemas.
+
+---
+
+### API-003 — Error Contract
+
+**Priority:** MUST
+
+API errors shall use a consistent error structure.
+
+---
+
+### API-004 — Versioning
+
+**Priority:** SHOULD
+
+Public application APIs should support an explicit versioning strategy.
+
+---
+
+# 23. User Interface Requirements
+
+### UI-001 — Request Queue
+
+**Priority:** MUST
+
+Users shall be able to view customer requests and their current status.
+
+---
+
+### UI-002 — Case Detail
+
+**Priority:** MUST
+
+Users shall be able to inspect a request including:
+
+- original message;
+- classification;
+- signals;
+- risk;
+- priority;
+- retrieved evidence;
+- recommendation;
+- routing;
+- governance;
+- SLA state;
+- and audit information.
+
+---
+
+### UI-003 — Human Review
+
+**Priority:** MUST
+
+The interface shall provide an explicit workflow for requests requiring
+human review.
+
+---
+
+### UI-004 — Decision Explanation
+
+**Priority:** MUST
+
+The interface shall expose why important AI-supported decisions were made.
+
+---
+
+### UI-005 — Evidence Access
+
+**Priority:** MUST
+
+Supporting evidence shall be accessible from the recommendation rather
+than hidden from the user.
+
+---
+
+# 24. Evaluation Requirements
+
+### EVAL-001 — Classification Evaluation
+
+**Priority:** MUST
+
+The project shall evaluate intent classification using an appropriate
+labelled test dataset.
+
+---
+
+### EVAL-002 — Risk Evaluation
+
+**Priority:** MUST
+
+The project shall measure risk/signal detection performance.
+
+---
+
+### EVAL-003 — Routing Evaluation
+
+**Priority:** MUST
+
+Correct routing shall be measured.
+
+---
+
+### EVAL-004 — Retrieval Evaluation
+
+**Priority:** MUST
+
+The RAG system shall be evaluated independently of answer generation.
+
+Candidate metrics include:
+
+- Precision@K;
+- Recall@K;
+- MRR;
+- or another justified retrieval metric.
+
+---
+
+### EVAL-005 — Grounding Evaluation
+
+**Priority:** MUST
+
+The project shall measure whether recommendations are supported by
+retrieved evidence.
+
+---
+
+### EVAL-006 — Abstention Evaluation
+
+**Priority:** MUST
+
+The system shall be tested on cases where insufficient evidence exists.
+
+---
+
+### EVAL-007 — Governance Evaluation
+
+**Priority:** MUST
+
+The project shall test whether governance rules prevent prohibited
+actions.
+
+---
+
+### EVAL-008 — Failure Evaluation
+
+**Priority:** MUST
+
+Evaluation shall include failure scenarios such as:
+
+- AI outage;
+- retrieval failure;
+- ambiguous requests;
+- conflicting evidence;
+- and malicious/untrusted input.
+
+---
+
+# 25. DevOps and Delivery Requirements
+
+### DEV-001 — Automated Tests
+
+**Priority:** MUST
+
+The repository shall include automated tests for critical application
+behaviour.
+
+---
+
+### DEV-002 — Continuous Integration
+
+**Priority:** MUST
+
+Repository changes shall be validated through CI.
+
+---
+
+### DEV-003 — Reproducible Environment
+
+**Priority:** MUST
+
+The project shall define reproducible backend and frontend development
+environments.
+
+---
+
+### DEV-004 — Configuration Separation
+
+**Priority:** MUST
+
+Environment-specific configuration shall be separated from application
+code.
+
+---
+
+### DEV-005 — Deployment
+
+**Priority:** SHOULD
+
+The final portfolio should demonstrate a reproducible deployment strategy.
+
+---
+
+# 26. Initial Roles
+
+The first implementation may support:
+
+```text
+AGENT
+Handles standard requests.
+
+REVIEWER
+Reviews restricted or escalated decisions.
+
+ADMIN
+Manages system configuration and knowledge.
+```
+
+Role definitions may evolve during architecture design.
+
+---
+
+# 27. Explicit Non-Requirements
+
+The initial Sigvora portfolio does **not** require:
+
+- real banking-system integration;
+- access to real customer accounts;
+- real payment execution;
+- autonomous fraud blocking;
+- production banking certification;
+- replacement of a CRM;
+- replacement of a contact centre;
 - unrestricted autonomous agents;
-- replacement of commercial observability platforms;
-- guaranteed root-cause analysis;
-- foundation-model training;
-- enterprise-scale multi-region infrastructure;
-- unnecessary microservice decomposition.
+- or real customer financial data.
 
-These may only be considered later if supported by evidence and product need.
+These are deliberately outside the portfolio boundary.
 
 ---
 
-# 13. Requirements Traceability
+# 28. MVP Requirements
 
-Every important capability should eventually have an evidence trail.
+The first vertical slice must demonstrate:
 
-```mermaid
-flowchart LR
-    A["Business Need"] --> B["Requirement"]
-    B --> C["Architecture"]
-    C --> D["Code"]
-    D --> E["Test"]
-    E --> F["Evaluation"]
-    F --> G["Evidence"]
+| ID | Capability |
+|---|---|
+| MVP-01 | Submit a synthetic customer request |
+| MVP-02 | Classify its intent |
+| MVP-03 | Extract important signals |
+| MVP-04 | Assess risk |
+| MVP-05 | Assign priority |
+| MVP-06 | Retrieve relevant knowledge |
+| MVP-07 | Generate an evidence-grounded recommendation |
+| MVP-08 | Recommend routing |
+| MVP-09 | Apply governance |
+| MVP-10 | Send restricted cases for human review |
+| MVP-11 | Assign and display SLA state |
+| MVP-12 | Preserve an audit trail |
+
+If these twelve capabilities do not work together, the core Sigvora
+workflow is not yet complete.
+
+---
+
+# 29. Requirements Traceability
+
+The intended traceability model is:
+
+```text
+BUSINESS PAIN
+      ↓
+BUSINESS_CASE.md
+      ↓
+REQUIREMENTS.md
+      ↓
+Requirement ID
+      ↓
+Architecture Component
+      ↓
+Implementation
+      ↓
+Automated Test / Experiment
+      ↓
+Measured Evidence
 ```
 
-A reviewer should eventually be able to ask:
+Example:
 
-> **Where is this requirement implemented, how was it tested, and what evidence demonstrates that it works?**
+```text
+Business problem:
+High-risk requests can be hidden in ordinary language.
 
-A formal traceability matrix will be introduced once implementation begins.
+        ↓
 
----
+RISK-001 / RISK-002
 
-# 14. Technology Neutrality
+        ↓
 
-This document deliberately does **not** require:
+Risk Assessment Component
 
-- FastAPI;
-- PostgreSQL;
-- Kafka;
-- Redis;
-- a vector database;
-- a particular LLM;
-- Kubernetes;
-- AWS, Azure or GCP.
+        ↓
 
-Those are implementation choices, not business requirements.
+Implementation
 
-Each significant technology introduced into Signaly must answer:
+        ↓
 
-> **Which requirement does this technology help us satisfy, and why is it preferable to a simpler alternative?**
+Risk Evaluation Dataset
 
-Major architectural decisions will be recorded using Architecture Decision Records (ADRs).
+        ↓
 
----
+Precision / Recall / F1
 
-# 15. Next Step
+        ↓
 
-The Business Case defines **why Signaly should exist**.
-
-This document defines **what Signaly must do**.
-
-The next document will define **how the system should be structured to satisfy these requirements**.
-
-## Next Document
-
-**`docs/ARCHITECTURE.md`**
-
----
-
-## Milestone 0 Progress
-
-```mermaid
-flowchart LR
-    A["README<br/>✓"] --> B["Business Case<br/>✓"]
-    B --> C["Requirements<br/>✓"]
-    C --> D["Architecture"]
-    D --> E["AI Design"]
-    E --> F["Evaluation Design"]
-    F --> G["ADR-001"]
-    G --> H["Milestone 1<br/>Build"]
+Evidence that the requirement is or is not satisfied
 ```
 
 ---
 
-> **Signaly** — *Build only what we can explain, test and evaluate.*
+# 30. Definition of Done
+
+A requirement shall not be considered complete merely because code exists.
+
+Where applicable, completion should require:
+
+```text
+IMPLEMENTED
+     +
+TESTED
+     +
+DOCUMENTED
+     +
+OBSERVABLE
+     +
+EVALUATED
+```
+
+This definition is particularly important for AI functionality.
+
+A prompt that appears to work during a manual demonstration is not
+sufficient evidence of reliability.
+
+---
+
+# 31. Requirement Change Control
+
+As Sigvora evolves, requirements may change.
+
+Changes should preserve:
+
+- requirement IDs where practical;
+- rationale;
+- traceability;
+- and version history.
+
+New technologies should not be added to the architecture without a
+requirement or engineering constraint that justifies them.
+
+---
+
+# 32. Next Artefact
+
+The next document is:
+
+`docs/ARCHITECTURE.md`
+
+The architecture will answer:
+
+> **How will Sigvora satisfy these requirements?**
+
+It will define:
+
+- system boundaries;
+- frontend;
+- backend services;
+- data layer;
+- AI orchestration;
+- RAG pipeline;
+- risk engine;
+- governance engine;
+- workflow orchestration;
+- SLA engine;
+- audit subsystem;
+- authentication and authorisation;
+- observability;
+- external model-provider boundaries;
+- failure paths;
+- and deployment topology.
+
+Architecture decisions will be mapped back to the requirement IDs in this
+document.
