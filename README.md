@@ -1,236 +1,439 @@
 # Sigvora
 
-> **Trustworthy AI for Operational Intelligence**
+**Trustworthy AI for Operational Intelligence**
 
-**From operational noise to evidence-grounded action.**
+Sigvora is an operational intelligence platform that helps teams turn fragmented system signals into correlated incidents, supporting evidence and actionable recommendations.
 
-Sigvora is an AI-assisted operational intelligence platform designed to help teams turn fragmented system signals into **correlated incidents, prioritised insights and evidence-grounded recommendations** while keeping humans in control of consequential decisions.
-
-Rather than treating every alert independently, Sigvora asks:
-
-> **Which signals belong together, what evidence supports the conclusion, how important is the incident, and what should an operator investigate next?**
+The project explores how AI can support operational decision-making without hiding uncertainty, separating conclusions from their evidence, or removing human oversight.
 
 ---
 
 ## The Problem
 
-Modern digital systems generate signals across monitoring tools, application logs, deployments, infrastructure, APIs and customer-support channels.
+Modern software systems generate operational information across many sources:
 
-A single incident may appear as several disconnected events:
+- application logs;
+- infrastructure metrics;
+- monitoring alerts;
+- deployment events;
+- API health checks;
+- customer-support reports.
 
-```text
-10:02  Checkout service deployed
-10:05  API latency increases
-10:06  HTTP 500 errors increase
-10:08  Payment failures increase
-10:10  Customers report failed payments
-10:12  Checkout degradation alert triggered
-```
+A single incident can therefore appear as several disconnected signals.
 
-Individually, these are signals.
+For example:
 
-Together, they may describe **one operational incident**.
+| Time | Source | Signal |
+|---|---|---|
+| 10:02 | Deployment | Checkout service v2.4 deployed |
+| 10:05 | Monitoring | API latency rises to 4.2 seconds |
+| 10:06 | Application | HTTP 500 errors increase |
+| 10:08 | Payments | Payment failure rate increases |
+| 10:10 | Support | Customers report failed payments |
+| 10:12 | Monitoring | Checkout degradation alert triggered |
 
-Operators must often make that connection manually while deciding what deserves attention first.
+These events may originate from different systems, but together they could describe the same underlying incident.
 
-Sigvora is designed to assist with that reasoning.
+The operational challenge is therefore not simply detecting more alerts.
+
+It is determining:
+
+- which signals are related;
+- what deserves attention first;
+- what evidence supports that conclusion;
+- what remains uncertain;
+- what an operator should investigate next.
 
 ---
 
 ## What Sigvora Does
 
+Sigvora provides a decision-support pipeline between operational signals and the people responsible for investigating them.
+
 ```mermaid
-flowchart LR
-    A["Operational<br/>Signals"] --> B["Validate &<br/>Normalise"]
-    B --> C["Correlate"]
-    C --> D["Prioritise"]
-    D --> E["Retrieve<br/>Evidence"]
-    E --> F["AI-Assisted<br/>Reasoning"]
-    F --> G["Recommendation<br/>+ Uncertainty"]
-    G --> H{"Human<br/>Review"}
-    H --> I["Decision"]
-    I --> J["Audit &<br/>Feedback"]
+flowchart TD
+
+    A["OPERATIONAL SIGNALS<br/><br/>Logs, metrics, alerts, deployments and support events"]
+
+    B["INCIDENT INTELLIGENCE<br/><br/>Validate, correlate and prioritise related signals"]
+
+    C["EVIDENCE<br/><br/>Retrieve and assemble supporting operational context"]
+
+    D["AI-ASSISTED REASONING<br/><br/>Summarise evidence and propose a next action"]
+
+    E["HUMAN REVIEW<br/><br/>Inspect evidence, uncertainty and recommendation"]
+
+    F["DECISION AND AUDIT<br/><br/>Accept, modify or reject and record the outcome"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
 ```
 
-The goal is not simply to generate an AI response.
+The output is intended to help an operator understand an incident rather than simply provide another alert.
 
-The goal is to provide an operator with:
+A typical incident view may contain:
 
-- related signals;
+- correlated signals;
 - incident priority;
 - supporting evidence;
-- a grounded summary;
-- a suggested next action;
-- uncertainty where evidence is incomplete;
-- control over the final decision.
+- an evidence-grounded summary;
+- a proposed next action;
+- uncertainty or conflicting evidence;
+- a record of the operator's final decision.
 
 ---
 
-## Why Trustworthy AI?
+## Trustworthy AI Approach
 
-Sigvora treats AI as a **decision-support component**, not the source of truth.
+Sigvora treats AI as one component of the decision process rather than the source of truth.
 
-The project is built around five principles:
+The project is built around several principles.
 
-### Evidence Grounding
-AI conclusions should be supported by available operational evidence.
+### Evidence grounding
 
-### Explicit Uncertainty
-Weak or conflicting evidence should not be presented as certainty.
+AI-generated conclusions should be based on evidence available to the system.
 
-### Human Oversight
-Operators can inspect, accept, modify or reject recommendations.
+The operator should be able to inspect that evidence.
 
-### Safe Failure
-If an AI component is unavailable, the underlying evidence remains accessible.
+### Separation of evidence and inference
 
-### Measurable Claims
-AI performance must be demonstrated through evaluation rather than assumed from convincing output.
+The system should distinguish between:
+
+**what was observed** and **what the system inferred from those observations**.
+
+This prevents generated explanations from being presented as raw facts.
+
+### Uncertainty
+
+Insufficient or conflicting evidence should not result in artificial certainty.
+
+Where appropriate, Sigvora should communicate that additional investigation is required.
+
+### Human oversight
+
+AI can assist with analysis and recommend a next action.
+
+The operator remains responsible for accepting, modifying or rejecting consequential recommendations.
+
+### Safe failure
+
+Failure of an AI component should not make the underlying incident evidence inaccessible.
+
+The system should be capable of falling back to an evidence-only workflow.
+
+### Evaluation
+
+AI behaviour will be measured against defined datasets, baselines and evaluation criteria.
+
+A convincing generated response is not treated as evidence that the system works.
 
 ---
 
-## Architecture
+## System Architecture
 
-Sigvora starts as a **modular application** with clear component boundaries.
+Sigvora will initially be implemented as a modular application.
 
 ```mermaid
-flowchart LR
-    A["Signals"] --> B["Ingestion"]
-    B --> C[("Signal Store")]
-    C --> D["Correlation"]
-    D --> E["Priority"]
-    E --> F["Evidence"]
-    F --> G["AI Reasoning"]
-    G --> H["Decision Support"]
-    H --> I["Human Operator"]
+flowchart TD
 
-    I --> J["Audit & Feedback"]
+    A["Operator Interface"]
+
+    B["Application API"]
+
+    C["Signal Processing"]
+
+    D["Correlation and Priority"]
+
+    E["Evidence Retrieval"]
+
+    F["AI Reasoning"]
+
+    G["Decision and Audit"]
+
+    H[("Operational Data")]
+
+    I["External AI Provider"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+
+    C --> H
+    D --> H
+    E --> H
+    G --> H
+
+    F --> I
 ```
 
-The MVP deliberately avoids unnecessary distributed infrastructure.
+The initial architecture deliberately avoids unnecessary distributed-system complexity.
 
-Technologies such as microservices, event streaming or specialised vector infrastructure will only be introduced when requirements or measured limitations justify them.
+The MVP does not require multiple microservices, Kubernetes, Kafka or other infrastructure simply to make the project appear more sophisticated.
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the system design.
+Additional infrastructure will only be introduced when a requirement or measured limitation justifies it.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the detailed architecture.
 
 ---
 
-## How Sigvora Will Be Evaluated
+## Where AI Is Used
 
-The project will use controlled operational scenarios with independently defined ground truth.
+AI is not required for every stage of the system.
 
-Evaluation will investigate questions such as:
+| Capability | Initial Approach |
+|---|---|
+| Input validation | Deterministic |
+| Data normalisation | Deterministic |
+| Signal correlation | Deterministic baseline with ML approaches evaluated where useful |
+| Incident prioritisation | Explainable baseline with learned approaches evaluated where useful |
+| Evidence retrieval | Retrieval techniques evaluated against a baseline |
+| Incident summarisation | AI-assisted |
+| Recommendation generation | AI-assisted |
+| Audit records | Deterministic |
+| Human approval | Human-controlled |
 
-- Can Sigvora correctly associate related signals?
-- Can it identify important incidents?
-- Can it retrieve the correct supporting evidence?
-- Are generated conclusions supported by that evidence?
-- Does it communicate uncertainty appropriately?
-- What happens when AI components fail?
-- Does decision support improve the workflow compared with a defined baseline?
+This separation makes it possible to determine whether AI actually improves a particular part of the workflow.
 
-The project will report negative and inconclusive results rather than presenting only successful demonstrations.
+---
+
+## Evaluation Strategy
+
+Sigvora will begin with controlled operational scenarios where the correct relationships between signals are known independently of the system.
+
+A scenario may contain:
+
+```text
+Known incident
+    |
+    |-- related operational signals
+    |-- unrelated signals
+    |-- expected priority
+    |-- supporting evidence
+    |-- expected investigation direction
+```
+
+Sigvora's output can then be compared with that ground truth.
+
+The evaluation will investigate areas including:
+
+| Area | Question |
+|---|---|
+| Correlation | Were related signals grouped correctly? |
+| Detection | Were important incidents identified? |
+| Prioritisation | Were important incidents ranked appropriately? |
+| Retrieval | Was the correct evidence retrieved? |
+| Grounding | Are generated claims supported by evidence? |
+| Uncertainty | Does the system recognise insufficient evidence? |
+| Reliability | What happens when components fail? |
+| Performance | How long does the workflow take? |
+
+Detailed metrics and experimental protocols will be defined in `docs/EVALUATION_DESIGN.md`.
+
+Results will distinguish between synthetic, public and other data sources.
+
+Negative or inconclusive experimental results will be retained.
 
 ---
 
 ## MVP Scope
 
-The first implementation focuses on one complete workflow:
+The first implementation focuses on proving one complete workflow:
 
-> **Signal → Incident → Evidence → Recommendation → Human Decision → Evaluation**
+```text
+Operational Signal
+        |
+        v
+Incident Candidate
+        |
+        v
+Supporting Evidence
+        |
+        v
+Decision Support
+        |
+        v
+Human Decision
+        |
+        v
+Evaluation
+```
 
 ### Included
 
 - structured signal ingestion;
 - validation and normalisation;
-- incident correlation;
-- priority assessment;
+- signal correlation;
+- incident prioritisation;
 - evidence retrieval;
-- grounded AI summaries;
+- evidence-grounded summaries;
 - suggested next actions;
 - uncertainty handling;
 - human review;
-- audit history;
+- audit records;
 - reproducible evaluation.
 
-### Not Included
+### Out of Scope
+
+The MVP will not attempt to provide:
 
 - autonomous production remediation;
-- unrestricted AI agents;
-- replacement of observability platforms;
+- unrestricted autonomous agents;
+- replacement of existing observability platforms;
 - guaranteed root-cause analysis;
-- unnecessary enterprise-scale infrastructure.
+- enterprise-scale distributed infrastructure;
+- foundation-model training.
 
 ---
 
 ## Proposed Technology Direction
 
-| Area | Direction |
+| Area | Proposed Direction |
 |---|---|
-| Backend | Python + FastAPI |
-| Validation | Pydantic |
+| Backend | Python and FastAPI |
+| Data Validation | Pydantic |
 | Persistence | PostgreSQL |
 | Data Access | SQLAlchemy |
-| AI | Provider-independent interface |
-| Frontend | React + TypeScript |
+| AI Integration | Provider-independent interface |
+| Frontend | React and TypeScript |
 | Testing | Pytest |
 | Python Environment | `uv` |
 | Packaging | Docker |
 | CI | GitHub Actions |
 
-Technology choices remain subject to implementation evidence and Architecture Decision Records.
+These are proposed engineering choices rather than permanent constraints.
+
+Significant decisions will be justified through Architecture Decision Records.
 
 ---
 
-## Project Documentation
+## Repository Structure
 
-| Document | Purpose |
-|---|---|
-| [`BUSINESS_CASE.md`](docs/BUSINESS_CASE.md) | Why Sigvora should exist |
-| [`REQUIREMENTS.md`](docs/REQUIREMENTS.md) | What the MVP must achieve |
-| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the system is structured |
-| `AI_DESIGN.md` | How trustworthy AI is designed |
-| `EVALUATION_DESIGN.md` | How performance will be measured |
-| `ADR/` | Why major engineering decisions were made |
+The repository will evolve toward the following structure as implementation begins:
 
----
-
-## Current Status
-
-**Milestone 0 — Product & Research Foundation**
-
-```mermaid
-flowchart LR
-    A["Business Case ✓"] --> B["Requirements ✓"]
-    B --> C["Architecture ✓"]
-    C --> D["AI Design"]
-    D --> E["Evaluation Design"]
-    E --> F["ADR-001"]
-    F --> G["Milestone 1<br/>Build"]
+```text
+Sigvora/
+|
+|-- src/
+|   `-- sigvora/
+|       |-- api/
+|       |-- domain/
+|       |-- ingestion/
+|       |-- correlation/
+|       |-- prioritisation/
+|       |-- evidence/
+|       |-- ai/
+|       |-- decisions/
+|       `-- audit/
+|
+|-- frontend/
+|
+|-- tests/
+|   |-- unit/
+|   |-- integration/
+|   `-- evaluation/
+|
+|-- experiments/
+|
+|-- data/
+|
+|-- docs/
+|
+|-- pyproject.toml
+|-- Dockerfile
+|-- LICENSE
+`-- README.md
 ```
 
-The current focus is establishing a **clear, testable and defensible foundation before implementation begins**.
+Directories will be created when implementation requires them rather than being added prematurely.
 
 ---
 
-## Project Standard
+## Documentation
 
-Every important capability should eventually have an evidence trail:
+The repository documentation follows a deliberate progression.
 
-> **Business Need → Requirement → Architecture → Code → Test → Evaluation → Evidence**
+| Document | Question It Answers |
+|---|---|
+| [`BUSINESS_CASE.md`](docs/BUSINESS_CASE.md) | Why should Sigvora exist? |
+| [`REQUIREMENTS.md`](docs/REQUIREMENTS.md) | What must the MVP achieve? |
+| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How will the system be structured? |
+| `AI_DESIGN.md` | How will AI be grounded and constrained? |
+| `EVALUATION_DESIGN.md` | How will performance be measured? |
+| `ADR/` | Why were major engineering decisions made? |
 
-A feature is not considered successful merely because it works in a demonstration.
+---
 
-It should be possible to explain:
+## Project Status
 
-**why it exists, how it works, how it was tested, and what evidence supports its performance.**
+Sigvora is currently in **Milestone 0: Product and Engineering Foundation**.
+
+```mermaid
+flowchart TD
+
+    A["Business Case<br/>Complete"]
+
+    B["Requirements<br/>Complete"]
+
+    C["Architecture<br/>Complete"]
+
+    D["AI Design<br/>Next"]
+
+    E["Evaluation Design"]
+
+    F["ADR-001"]
+
+    G["Milestone 1<br/>Implementation"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+```
+
+Implementation begins after the core product, architecture, AI and evaluation decisions are sufficiently defined.
+
+---
+
+## Engineering Standard
+
+Sigvora is being developed around the following evidence chain:
+
+```text
+Business Problem
+      |
+      v
+Requirement
+      |
+      v
+Architecture
+      |
+      v
+Implementation
+      |
+      v
+Test
+      |
+      v
+Evaluation
+      |
+      v
+Evidence
+```
+
+The objective is not to create a demonstration that merely appears intelligent.
+
+The objective is to build a system whose important behaviour can be **explained, tested and evaluated**.
 
 ---
 
 ## License
 
-See [`LICENSE`](LICENSE) for repository licensing information.
-
----
-
-**Sigvora** — *Trustworthy AI should support decisions, not conceal how they were made.*
+See [`LICENSE`](LICENSE) for licensing information.
