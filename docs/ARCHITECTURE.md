@@ -1,610 +1,329 @@
 # Sigvora — System Architecture
 
-> **Document Status:** Architecture Baseline  
-> **Version:** 0.2.0  
+> **Status:** Architecture Baseline  
+> **Version:** 0.3.0  
 > **Project:** Sigvora  
 > **Product:** Trustworthy AI Customer-Request Intelligence and Decision-Support Platform  
-> **Initial Demonstration Domain:** Fictional UK Financial Services  
-> **Architecture Style:** Modular Monolith with Explicit Domain Boundaries  
-> **Source Documents:** `README.md`, `docs/BUSINESS_CASE.md`, `docs/REQUIREMENTS.md`
+> **Demonstration Domain:** Fictional UK Financial Services  
+> **Architecture Style:** Modular Monolith
 
 ---
 
-# 1. Purpose
+## 1. Purpose
 
-This document defines the target system architecture for Sigvora.
+Sigvora helps organisations understand, prioritise, route and safely act
+on customer requests using evidence-grounded AI, organisational knowledge
+and explicit governance controls.
 
-Sigvora exists to solve a specific customer-operations problem:
+This document explains how the main parts of Sigvora work together.
 
-> Organisations receive customer requests with different intents, urgency,
-> risks and handling requirements, but understanding, prioritising,
-> grounding, routing and governing those requests can require significant
-> manual interpretation across fragmented knowledge and workflows.
+The architecture is designed around one question:
 
-Sigvora addresses this problem by transforming an incoming customer
-request into a structured, evidence-grounded and governable
-decision-support case.
+> **How can Sigvora turn an unstructured customer request into a useful,
+> evidence-grounded and safely governed operational decision?**
 
-The architecture therefore follows the customer-request lifecycle:
+---
 
-```text
-CUSTOMER REQUEST
-       ↓
-REQUEST UNDERSTANDING
-       ↓
-DECISION SIGNALS
-       ↓
-RISK + PRIORITY
-       ↓
-ORGANISATIONAL KNOWLEDGE / RAG
-       ↓
-EVIDENCE-GROUNDED RECOMMENDATION
-       ↓
-ROUTING
-       ↓
-GOVERNANCE
-       ↓
-HUMAN REVIEW / CONTROLLED ACTION
-       ↓
-SLA TRACKING
-       ↓
-AUDIT + FEEDBACK + EVALUATION
+## 2. What Sigvora Does
+
+A customer may submit a simple request:
+
+> "Please send me my latest statement."
+
+or something requiring more careful handling:
+
+> "My card was stolen yesterday and there are payments showing that I
+> didn't make."
+
+These messages should not necessarily receive the same priority, routing
+or level of AI autonomy.
+
+Sigvora therefore processes each request through a controlled decision
+pipeline.
+
+```mermaid
+flowchart LR
+    A["Customer<br/>Request"] --> B["Understand<br/>Request"]
+    B --> C["Decision<br/>Signals"]
+    C --> D["Risk &<br/>Priority"]
+    D --> E["Retrieve<br/>Knowledge"]
+    E --> F["Grounded<br/>Recommendation"]
+    F --> G["Routing"]
+    G --> H["Governance"]
+    H --> I{"Decision"}
+
+    I -->|Allow| J["Controlled<br/>Action"]
+    I -->|Review| K["Human<br/>Review"]
+    I -->|Escalate| L["Specialist<br/>Team"]
+    I -->|Abstain| M["More Evidence /<br/>Human Triage"]
+
+    J --> N["SLA + Audit"]
+    K --> N
+    L --> N
+    M --> N
 ```
 
-Every major architectural component must support this lifecycle.
+### What this means
+
+Sigvora does not simply send a customer message to an LLM and return its
+answer.
+
+It progressively builds evidence about:
+
+- what the customer needs;
+- what important facts are present;
+- how serious and urgent the case is;
+- what organisational knowledge applies;
+- what should happen next;
+- who should handle it;
+- and whether AI has sufficient authority to proceed.
 
 ---
 
-# 2. Product Boundary
+## 3. Product Boundary
 
-Sigvora is:
+Sigvora is specifically a:
 
-> **A Trustworthy AI customer-request intelligence and decision-support
-> platform that helps organisations understand, prioritise, route and
-> safely act on customer requests using evidence-grounded AI,
-> organisational knowledge and explicit governance controls.**
+> **Trustworthy AI customer-request intelligence and decision-support
+> platform.**
 
-Sigvora is not:
+It is not:
 
 - a generic chatbot;
-- a standalone RAG application;
-- a sentiment-analysis demo;
-- an infrastructure-monitoring platform;
-- an AIOps platform;
-- an observability system;
+- a standalone RAG demonstration;
+- a sentiment-analysis application;
 - a CRM replacement;
 - a banking core system;
-- a fraud-detection engine;
+- a fraud-detection system;
+- an infrastructure-monitoring platform;
 - or an unrestricted autonomous agent.
 
-The architecture must preserve this boundary.
+The initial portfolio uses a fictional UK financial-services organisation
+because requests involving payments, cards, complaints, financial
+difficulty and privacy create meaningful differences in risk, evidence
+and human-oversight requirements.
 
 ---
 
-# 3. Initial Demonstration Environment
+## 4. Architecture Style
 
-The first Sigvora implementation models a fictional UK financial-services
-customer-service environment.
+Sigvora starts as a **modular monolith**.
 
-Example request categories include:
+### What does that mean?
+
+The backend is deployed as one application, but its responsibilities are
+separated into clear modules.
+
+For example:
 
 ```text
-Account Access
-Card Issues
-Payment Problems
-Potential Fraud
-Complaints
-Financial Difficulty
-Document / Statement Requests
-Privacy / Data Requests
-Technical Support
-General Enquiries
+Request Management
+Request Understanding
+Risk & Priority
+Knowledge Retrieval
+Recommendation
+Routing
+Governance
+Human Review
+SLA
+Audit
 ```
 
-This domain provides meaningful variation in:
+This gives Sigvora clear engineering boundaries without creating many
+independent services before there is a genuine need for them.
 
-- urgency;
-- customer impact;
-- financial exposure;
-- sensitivity;
-- knowledge requirements;
-- specialist ownership;
-- SLA expectations;
-- and required human oversight.
+### Why not start with microservices?
 
-The domain is used to demonstrate the architecture.
+Microservices would introduce additional deployment, networking,
+monitoring and data-consistency complexity.
 
-It does not imply integration with a real bank or use of real customer
-financial data.
+Sigvora does not currently have evidence that it needs that complexity.
+
+The initial architectural principle is therefore:
+
+> **Separate responsibilities first. Separate deployments only when a
+> real requirement justifies it.**
 
 ---
 
-# 4. Architectural Objective
+## 5. High-Level Architecture
 
-The architecture must reliably answer:
+```mermaid
+flowchart TB
+    U["Customer / Service User"]
 
-```text
-WHAT does the customer need?
+    UI["Sigvora Web Application<br/>Queue • Cases • Review • SLA • Audit"]
 
-WHAT important indicators are present?
+    API["API Layer<br/>Validation • Authentication • Authorisation"]
 
-HOW urgent is the request?
+    subgraph CORE["Sigvora Customer-Request Decision Engine"]
+        RM["Request<br/>Management"]
+        INT["Request<br/>Understanding"]
+        SIG["DecisionSignal<br/>Extraction"]
+        RP["Risk &<br/>Priority"]
+        RAG["Knowledge<br/>Retrieval"]
+        REC["Grounded<br/>Recommendation"]
+        ROUTE["Routing"]
+        GOV["Governance"]
+        HITL["Human<br/>Review"]
+        SLA["SLA"]
+        AUD["Audit"]
 
-WHAT could happen if it is mishandled?
+        RM --> INT
+        INT --> SIG
+        SIG --> RP
+        RP --> RAG
+        RAG --> REC
+        REC --> ROUTE
+        ROUTE --> GOV
+        GOV --> HITL
+        HITL --> SLA
+        SLA --> AUD
+    end
 
-WHAT organisational knowledge applies?
+    DB[("Operational Database")]
+    KB[("Knowledge Index")]
+    AI["AI / Embedding<br/>Provider"]
 
-WHAT should happen next?
+    U --> UI
+    UI --> API
+    API --> RM
 
-WHO should handle it?
+    RM <--> DB
+    INT <--> AI
+    SIG <--> AI
+    RAG <--> KB
+    RAG <--> AI
+    REC <--> AI
 
-IS the available evidence sufficient?
-
-WHAT is the AI permitted to do?
-
-DOES a human need to intervene?
-
-WHEN must the request be handled?
-
-CAN the decision later be reconstructed?
+    AUD --> DB
 ```
 
-These questions define Sigvora's architecture.
+### What this diagram tells us
 
----
+The **web application** is where agents and reviewers work with customer
+cases.
 
-# 5. Architecture Principles
+The **API layer** validates requests and protects application operations.
 
-## AP-01 — Customer Request Is the Primary Domain Object
+The **decision engine** contains the actual Sigvora business workflow.
 
-The architecture begins with a customer request, not an LLM prompt.
+The **operational database** stores customer cases and their decision
+history.
 
----
+The **knowledge index** supports retrieval of approved organisational
+knowledge.
 
-## AP-02 — Preserve the Original Request
-
-AI processing must never replace or modify the original customer message.
-
----
-
-## AP-03 — Persist Before AI Processing
-
-A valid request should be persisted before expensive or external AI
-processing begins.
-
----
-
-## AP-04 — AI Is Not the Entire System
-
-AI should be used where language understanding and reasoning provide
-value.
-
-Deterministic logic should be used where predictability is more
+The **AI provider** assists with language-understanding tasks where AI is
 appropriate.
 
----
+AI therefore supports Sigvora.
 
-## AP-05 — Evidence Before Policy-Dependent Recommendation
-
-A recommendation dependent on organisational policy should be grounded in
-retrieved approved knowledge.
+It does not control the entire system.
 
 ---
 
-## AP-06 — Confidence Does Not Equal Authority
+## 6. Request Understanding
 
-A highly confident model prediction does not automatically permit an
-operational action.
+The first intelligence task is understanding what the customer wants.
 
----
-
-## AP-07 — Governance Is Independent of Generative Reasoning
-
-An LLM must not determine whether its own proposed action is authorised.
-
----
-
-## AP-08 — Human Oversight Is Risk Sensitive
-
-Higher-risk or uncertain cases should receive stronger human control.
-
----
-
-## AP-09 — Safe Failure
-
-Missing evidence, AI-provider failure or ambiguous interpretation must
-lead to a safe state rather than fabricated certainty.
-
----
-
-## AP-10 — Decisions Must Be Reconstructable
-
-Sigvora should retain sufficient information to explain how an important
-decision was reached.
-
----
-
-## AP-11 — Evaluate Before Claiming Trust
-
-Trustworthy AI claims must eventually be supported by measurable
-evaluation.
-
----
-
-# 6. Architecture Style
-
-Sigvora will initially use a:
-
-> **Modular Monolith with Explicit Domain Boundaries**
-
-The initial portfolio does not require multiple independently deployed
-microservices.
-
-A modular monolith gives the project:
-
-- clear component boundaries;
-- simpler deployment;
-- easier testing;
-- transactional consistency;
-- lower infrastructure complexity;
-- and faster iteration.
-
-The architecture can evolve later if scale, security isolation or
-independent deployment genuinely requires service extraction.
-
----
-
-# 7. Sigvora System Context
+Consider:
 
 ```text
-                    ┌──────────────────────┐
-                    │       Customer       │
-                    └──────────┬───────────┘
-                               │
-                               │ submits request
-                               ▼
-                    ┌──────────────────────┐
-                    │   Request Channel    │
-                    │   Web / API          │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         SIGVORA                              │
-│                                                              │
-│  Understand Customer Request                                 │
-│             ↓                                                │
-│  Extract Decision Signals                                    │
-│             ↓                                                │
-│  Assess Risk + Priority                                      │
-│             ↓                                                │
-│  Retrieve Organisational Knowledge                           │
-│             ↓                                                │
-│  Generate Grounded Recommendation                            │
-│             ↓                                                │
-│  Determine Routing                                           │
-│             ↓                                                │
-│  Apply Governance                                            │
-│             ↓                                                │
-│  Human Review where required                                 │
-│             ↓                                                │
-│  Track SLA + Audit Outcome                                   │
-└───────────────┬───────────────────────────┬──────────────────┘
-                │                           │
-                ▼                           ▼
-       ┌─────────────────┐         ┌──────────────────┐
-       │ Customer-Service│         │ Approved AI /    │
-       │ Agent / Reviewer│         │ Embedding Model  │
-       └─────────────────┘         └──────────────────┘
-```
-
-Sigvora sits between the incoming customer request and the operational
-handling decision.
-
----
-
-# 8. Primary User Experience
-
-The main Sigvora interface should not resemble a generic chatbot.
-
-The principal experience is a customer-request operations workspace.
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                         SIGVORA                              │
-├──────────────────────────────────────────────────────────────┤
-│ REQUEST QUEUE                                                │
-│                                                              │
-│ P1  Potential Fraud        HIGH       00:18 remaining        │
-│ P2  Payment Issue          MEDIUM     01:42 remaining        │
-│ P2  Financial Difficulty   HIGH       REVIEW                 │
-│ P3  Statement Request      LOW        ON TRACK               │
-└──────────────────────────────────────────────────────────────┘
-```
-
-Selecting a request opens the case workspace.
-
----
-
-# 9. Case Workspace
-
-The case workspace makes Sigvora's reasoning visible.
-
-```text
-┌───────────────────────────────────────────────────────────────┐
-│ CASE SGV-00127                         P1 • HIGH RISK         │
-├───────────────────────────────┬───────────────────────────────┤
-│ CUSTOMER REQUEST              │ REQUEST UNDERSTANDING         │
-│                               │                               │
-│ "My card was stolen..."       │ Intent: Potential Fraud       │
-│                               │ Category: Card Security       │
-├───────────────────────────────┼───────────────────────────────┤
-│ DECISION SIGNALS              │ RISK + PRIORITY               │
-│                               │                               │
-│ • stolen card                 │ Risk: HIGH                    │
-│ • unknown transactions        │ Priority: P1                  │
-│ • financial exposure          │ Reason: active exposure       │
-├───────────────────────────────┼───────────────────────────────┤
-│ SUPPORTING EVIDENCE           │ ROUTING                       │
-│                               │                               │
-│ Fraud Procedure               │ Fraud / Card Security         │
-│ Card Security Guidance        │                               │
-├───────────────────────────────┼───────────────────────────────┤
-│ AI RECOMMENDATION             │ GOVERNANCE                    │
-│                               │                               │
-│ Urgent escalation...          │ ESCALATE                      │
-│                               │ Human handling required       │
-├───────────────────────────────┴───────────────────────────────┤
-│ SLA                     HUMAN REVIEW            AUDIT        │
-└───────────────────────────────────────────────────────────────┘
-```
-
-This interface reinforces the product's purpose:
-
-> help a user understand what the customer needs, why the case matters,
-> what evidence applies and what should happen next.
-
----
-
-# 10. High-Level Application Architecture
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    SIGVORA WEB APP                          │
-│                                                             │
-│ Request Queue                                               │
-│ Case Workspace                                              │
-│ Human Review                                                │
-│ Knowledge Evidence                                          │
-│ SLA Status                                                  │
-│ Audit Timeline                                              │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                         HTTPS
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    SIGVORA API                              │
-│                                                             │
-│ Authentication                                              │
-│ Request Validation                                          │
-│ API Contracts                                               │
-│ Authorisation                                               │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│               CUSTOMER-REQUEST WORKFLOW                     │
-│                                                             │
-│  Request Management                                         │
-│         ↓                                                   │
-│  Request Understanding                                      │
-│         ↓                                                   │
-│  DecisionSignal Extraction                                  │
-│         ↓                                                   │
-│  Risk + Priority                                            │
-│         ↓                                                   │
-│  Knowledge Retrieval                                        │
-│         ↓                                                   │
-│  Recommendation                                             │
-│         ↓                                                   │
-│  Routing                                                    │
-│         ↓                                                   │
-│  Governance                                                 │
-│         ↓                                                   │
-│  Human Review                                               │
-│         ↓                                                   │
-│  SLA + Audit                                                │
-└──────────────┬───────────────────────────────┬──────────────┘
-               │                               │
-               ▼                               ▼
-      ┌─────────────────┐             ┌──────────────────┐
-      │ Operational DB  │             │ AI / Embeddings  │
-      └─────────────────┘             └──────────────────┘
-               │
-               ▼
-      ┌─────────────────┐
-      │ Knowledge Index │
-      └─────────────────┘
-```
-
----
-
-# 11. Domain Model
-
-The central aggregate is the customer case.
-
-```text
-CustomerRequest
-      │
-      ├── IntentClassification
-      │
-      ├── DecisionSignal[]
-      │
-      ├── RiskAssessment
-      │
-      ├── PriorityAssessment
-      │
-      ├── Evidence[]
-      │
-      ├── Recommendation
-      │
-      ├── RoutingDecision
-      │
-      ├── GovernanceDecision
-      │
-      ├── HumanDecision
-      │
-      ├── SLAState
-      │
-      └── AuditEvent[]
-```
-
-These domain objects preserve the reasoning chain from request to
-operational outcome.
-
----
-
-# 12. CustomerRequest
-
-`CustomerRequest` represents the original incoming request.
-
-Conceptually:
-
-```text
-CustomerRequest
-├── id
-├── original_text
-├── channel
-├── submitted_at
-├── status
-├── created_at
-└── updated_at
-```
-
-The original request is immutable from the perspective of downstream AI
-processing.
-
----
-
-# 13. Request Understanding
-
-The Request Understanding component answers:
-
-> **What is the customer trying to achieve?**
-
-It may determine:
-
-```text
-Intent
-Category
-Relevant Entities
-Context
-Confidence
-```
-
-Example:
-
-```text
-CUSTOMER
-
-"I sent £4,800 yesterday but the person I paid
+"I transferred £4,800 yesterday and the recipient
 still hasn't received it."
+```
 
-                ↓
+Sigvora may produce:
 
-REQUEST UNDERSTANDING
-
+```text
 Intent:
-Investigate payment
+Payment investigation
 
 Category:
 Payment Issue
 
-Entities:
+Relevant entity:
 Amount = £4,800
-
-Context:
-Sender reports debit but recipient reports non-receipt
 ```
 
-The output must be structured.
+This is called **request understanding**.
+
+Its purpose is to convert natural customer language into structured
+information that the rest of the system can use.
 
 ---
 
-# 14. DecisionSignal
+## 7. DecisionSignal
 
-A `DecisionSignal` is:
+Sigvora also identifies **DecisionSignals**.
 
-> **A structured fact or indicator identified in a customer request that
-> may materially influence risk, priority, routing or governance.**
+A DecisionSignal is:
 
-This name is deliberately used instead of the ambiguous technical term
-`Signal`.
+> **An important fact or indicator in a customer request that may change
+> how the request should be assessed or handled.**
 
-Example:
-
-```text
-"My card was stolen and there are payments
-I don't recognise."
-
-                 ↓
-
-DecisionSignal: STOLEN_CARD
-
-DecisionSignal: UNRECOGNISED_TRANSACTION
-
-DecisionSignal: POSSIBLE_FINANCIAL_EXPOSURE
-```
-
-Conceptual structure:
+For example:
 
 ```text
-DecisionSignal
-├── id
-├── case_id
-├── type
-├── value
-├── source_text
-├── confidence
-├── extraction_method
-└── created_at
+"My card was stolen and there are three payments
+that I don't recognise."
 ```
 
-The source relationship must be preserved.
+may produce:
+
+```text
+STOLEN_CARD
+
+UNRECOGNISED_TRANSACTION
+
+POSSIBLE_FINANCIAL_EXPOSURE
+```
+
+These are different from the customer's intent.
+
+The **intent** describes what the customer is trying to achieve.
+
+The **DecisionSignals** describe important circumstances that should
+influence the decision.
+
+```mermaid
+flowchart LR
+    A["Customer Request"]
+
+    A --> B["Intent<br/>What does the customer need?"]
+    A --> C["DecisionSignals<br/>What important facts are present?"]
+
+    B --> D["Case Assessment"]
+    C --> D
+```
+
+Keeping these concepts separate makes later risk and routing decisions
+more explainable and testable.
 
 ---
 
-# 15. Risk Assessment
+## 8. Risk and Priority
 
-Risk answers:
+Risk and priority are related, but they do not mean the same thing.
 
-> **What could happen if this customer request is delayed,
-> misunderstood or handled incorrectly?**
+### Risk
 
-Potential dimensions include:
+Risk asks:
 
-```text
-Customer Harm
-Financial Exposure
-Security
-Privacy
-Vulnerability
-Service Impact
-```
+> **What could happen if this request is misunderstood, delayed or handled
+> incorrectly?**
 
-Risk output:
+Potential factors include:
 
-```text
-RiskAssessment
-├── level
-├── factors[]
-├── rationale
-├── rule_results[]
-└── created_at
-```
+- customer harm;
+- financial exposure;
+- security;
+- privacy;
+- vulnerability;
+- and service impact.
 
-Initial levels:
+Initial risk levels are:
 
 ```text
 LOW
@@ -613,17 +332,13 @@ HIGH
 CRITICAL
 ```
 
-The system should not rely solely on unrestricted LLM judgement for risk.
+### Priority
 
----
+Priority asks:
 
-# 16. Priority Assessment
+> **How urgently should the organisation handle this request?**
 
-Priority answers a different question:
-
-> **How urgently should this request be handled?**
-
-Initial levels:
+Initial priorities are:
 
 ```text
 P1 — Critical
@@ -632,288 +347,224 @@ P3 — Normal
 P4 — Low
 ```
 
-Priority may consider:
+The relationship is therefore:
 
-```text
-Risk
-+
-Urgency
-+
-Customer Impact
-+
-Request Type
-+
-Service Rules
+```mermaid
+flowchart LR
+    A["Intent"] --> D["Assessment"]
+    B["DecisionSignals"] --> D
+    C["Business Rules"] --> D
+
+    D --> E["Risk<br/>Potential consequence"]
+    D --> F["Priority<br/>Handling urgency"]
 ```
 
-This separation prevents Sigvora from treating every high-risk concept as
-an identical queueing decision.
+Sigvora should not rely solely on an LLM to decide risk.
+
+Known business rules can provide deterministic controls while AI helps
+interpret natural language.
 
 ---
 
-# 17. Why Sentiment Is Not Priority
+## 9. Sentiment Is Not Risk
 
-Sigvora may use sentiment as contextual information, but sentiment must
-not control risk or priority.
+This distinction is important.
 
-```text
-"I'm furious that my statement hasn't arrived."
+A customer saying:
 
-Negative sentiment
-≠
-Automatically high operational risk
-```
+> "I'm furious that my statement hasn't arrived."
 
-while:
+may express strong negative sentiment.
 
-```text
-"I don't recognise these payments."
+Another customer may calmly say:
 
-Calm language
-+
-Potential financial harm
-=
-Potentially high operational risk
-```
+> "I don't recognise these three payments."
+
+The second request may represent substantially greater operational risk.
 
 Therefore:
 
 ```text
-SENTIMENT ≠ RISK
-
-SENTIMENT ≠ PRIORITY
+Sentiment ≠ Risk
+Emotion   ≠ Priority
+Tone      ≠ Urgency
 ```
 
-This is an architectural rule, not merely a prompt instruction.
+Sigvora may use sentiment as contextual information, but sentiment alone
+must not determine risk or priority.
 
 ---
 
-# 18. Organisational Knowledge
+## 10. Organisational Knowledge and RAG
 
-Sigvora uses approved organisational knowledge to ground
-policy-dependent recommendations.
+Some customer requests require organisational knowledge before Sigvora
+can make a useful recommendation.
 
-Initial synthetic knowledge may include:
+Examples include:
 
-```text
-Customer-Service Procedures
-Payment Investigation Procedures
-Fraud / Card Security Procedures
-Complaint Handling Guidance
-Financial-Difficulty Guidance
-Privacy Procedures
-Escalation Rules
-SLA Rules
-```
+- payment investigation procedures;
+- fraud/card-security procedures;
+- complaint guidance;
+- financial-difficulty procedures;
+- privacy guidance;
+- escalation rules;
+- and SLA rules.
 
-This knowledge is separate from the customer request.
+Sigvora uses **Retrieval-Augmented Generation (RAG)** for this purpose.
 
----
+### What RAG means here
 
-# 19. RAG Architecture
+Instead of expecting an AI model to remember organisational policy,
+Sigvora searches an approved knowledge collection and gives relevant
+evidence to the model.
 
-RAG has two distinct processes.
+RAG is therefore a supporting mechanism.
 
-## 19.1 Knowledge Ingestion
-
-```text
-Approved Document
-       ↓
-Validate
-       ↓
-Parse
-       ↓
-Chunk
-       ↓
-Attach Metadata
-       ↓
-Create Embeddings
-       ↓
-Index
-```
-
-Metadata should preserve information such as:
-
-```text
-document_id
-title
-version
-section
-chunk_id
-effective_date
-```
-
-where applicable.
+> **RAG is not Sigvora's product.**
 
 ---
 
-## 19.2 Request-Time Retrieval
+## 11. RAG Architecture
 
-```text
-Customer Case
-      ↓
-Intent + Decision Signals
-      ↓
-Retrieval Query
-      ↓
-Candidate Evidence
-      ↓
-Ranking / Filtering
-      ↓
-Relevant Evidence
-      ↓
-Recommendation Context
+RAG has two separate stages.
+
+```mermaid
+flowchart LR
+    subgraph INGEST["1 — Knowledge Preparation"]
+        A["Approved<br/>Documents"]
+        --> B["Parse"]
+        --> C["Chunk"]
+        --> D["Metadata"]
+        --> E["Embeddings"]
+        --> F[("Knowledge Index")]
+    end
+
+    subgraph RUNTIME["2 — Customer Request Processing"]
+        G["Customer<br/>Request"]
+        --> H["Intent +<br/>DecisionSignals"]
+        --> I["Search"]
+
+        I --> F
+        F --> J["Candidate<br/>Evidence"]
+        J --> K["Rank / Filter"]
+        K --> L["Relevant<br/>Evidence"]
+        L --> M["Grounded<br/>Recommendation"]
+    end
 ```
 
-Retrieval is therefore directly connected to the customer's problem.
+### Why separate the two?
+
+Knowledge preparation happens when approved organisational documents are
+added or updated.
+
+Retrieval happens when Sigvora needs evidence for a particular customer
+request.
+
+Keeping them separate makes the system easier to test and maintain.
 
 ---
 
-# 20. Evidence
+## 12. Evidence Is a First-Class Object
 
-Retrieved knowledge becomes a first-class `Evidence` object.
+Evidence should not disappear inside an AI prompt.
+
+Sigvora should retain information such as:
 
 ```text
 Evidence
-├── id
-├── case_id
-├── document_id
-├── chunk_id
-├── content
-├── relevance_score
-├── source_metadata
-└── retrieved_at
+├── document
+├── section / chunk
+├── relevance
+├── version
+└── retrieval time
 ```
 
-This prevents supporting knowledge from disappearing inside an LLM
-prompt.
+This allows a user to see:
 
-The user should eventually be able to inspect the evidence used by
-Sigvora.
+> **Which organisational information supported this recommendation?**
+
+It also allows us to evaluate whether Sigvora retrieved the correct
+information.
 
 ---
 
-# 21. Evidence States
+## 13. Evidence-Grounded Recommendation
 
-Sigvora must recognise that evidence is not always available or reliable.
+Once relevant knowledge has been retrieved, Sigvora can generate a
+recommended next step.
 
-Useful states include:
-
-```text
-AVAILABLE
-
-MISSING
-
-INSUFFICIENT
-
-CONFLICTING
-
-STALE
-```
-
-These states can affect recommendation and governance behaviour.
-
-Example:
-
-```text
-Relevant policy unavailable
-        ↓
-Evidence = MISSING
-        ↓
-Do not fabricate policy
-        ↓
-REVIEW / ABSTAIN
-```
-
----
-
-# 22. Evidence-Grounded Recommendation
-
-The Recommendation component answers:
-
-> **Given the request, its risk and the available organisational
-> evidence, what should happen next?**
-
-Inputs:
+Conceptually:
 
 ```text
 Customer Request
 +
 Intent
 +
-Decision Signals
+DecisionSignals
 +
 Risk
 +
 Priority
 +
-Evidence
+Relevant Evidence
+────────────────────────
+Grounded Recommendation
 ```
 
-Output:
+A recommendation should contain:
 
 ```text
-Recommendation
-├── proposed_action
-├── rationale
-├── evidence_refs[]
-├── uncertainty
-├── alternatives[]
-├── model_metadata
-└── created_at
+Recommended Action
+Reason
+Supporting Evidence
+Uncertainty
 ```
 
-Policy-dependent recommendations must reference supporting evidence.
+The recommendation is still a **proposal**.
+
+It is not automatically authorised.
 
 ---
 
-# 23. Grounding Boundary
+## 14. Fact, Evidence and Inference
 
-Sigvora must distinguish three types of information.
+Sigvora must distinguish three things.
 
-### Customer Fact
+```mermaid
+flowchart LR
+    A["Customer Fact<br/>'I don't recognise these payments'"]
+    --> D["Decision Context"]
 
-What the customer actually said.
+    B["Organisational Evidence<br/>Approved fraud procedure"]
+    --> D
 
-### Organisational Evidence
-
-What an approved policy or procedure states.
-
-### AI Inference
-
-What the model concludes from those inputs.
-
-Example:
-
-```text
-CUSTOMER FACT
-
-"I don't recognise these payments."
-
-        ↓
-
-ORGANISATIONAL EVIDENCE
-
-Approved unauthorised-transaction procedure.
-
-        ↓
-
-AI INFERENCE
-
-This request should enter the fraud-review workflow.
+    D --> C["AI Inference<br/>Route for fraud review"]
 ```
 
-The architecture must not silently treat an inference as a verified fact.
+### Customer fact
+
+Something the customer actually reported.
+
+### Organisational evidence
+
+Information retrieved from an approved organisational source.
+
+### AI inference
+
+A conclusion generated from the available information.
+
+This prevents an AI-generated conclusion from being presented as though
+it were a verified customer or organisational fact.
 
 ---
 
-# 24. Routing
+## 15. Routing
 
 Routing answers:
 
-> **Who should handle this customer request?**
+> **Who should handle this request?**
 
-Potential destinations include:
+Possible destinations in the demonstration environment include:
 
 ```text
 Customer Support
@@ -926,1162 +577,578 @@ Privacy / Data
 Human Triage
 ```
 
-Example:
+For example:
 
 ```text
-Intent:
-Potential Fraud
-
-Signals:
-STOLEN_CARD
-UNRECOGNISED_TRANSACTION
-
-Risk:
-HIGH
-
-        ↓
-
-Route:
+Potential fraud
++
+Stolen card
++
+Unrecognised transactions
++
+High risk
+──────────────────────────
 Fraud / Card Security
 ```
 
-Stable business routing rules should remain deterministic where possible.
+Where stable business rules exist, routing should use those rules rather
+than unnecessarily asking an LLM to make the decision.
 
 ---
 
-# 25. RSG in Sigvora
+## 16. RSG — Risk, Signal, Governance
 
-RSG supports Sigvora's customer-request decision process.
+RSG is Sigvora's supporting decision-control model.
 
-It does not define the product itself.
+It is **not the product itself**.
 
-## Signal
+```mermaid
+flowchart LR
+    A["Customer<br/>Request"]
+    --> B["DecisionSignals"]
 
-> What important indicators are present in the customer's request?
+    B --> C["SIGNAL<br/>What matters?"]
 
-Represented technically through `DecisionSignal`.
+    C --> D["RISK<br/>What could go wrong?"]
 
-## Risk
+    D --> E["Evidence-Grounded<br/>Recommendation"]
 
-> What could happen if those indicators are mishandled?
+    E --> F["GOVERNANCE<br/>What is permitted?"]
 
-Represented through `RiskAssessment`.
-
-## Governance
-
-> Given the risk, evidence and uncertainty, what is Sigvora permitted to
-> do?
-
-Represented through `GovernanceDecision`.
-
-Therefore:
-
-```text
-CUSTOMER REQUEST
-       ↓
-DECISION SIGNALS
-     [SIGNAL]
-       ↓
-RISK ASSESSMENT
-      [RISK]
-       ↓
-EVIDENCE + RECOMMENDATION
-       ↓
-GOVERNANCE DECISION
-   [GOVERNANCE]
-       ↓
-SAFE NEXT STEP
+    F --> G["Safe Next Step"]
 ```
+
+### Signal
+
+What important indicators are present?
+
+### Risk
+
+What could happen if those indicators are mishandled?
+
+### Governance
+
+Given the evidence, risk and uncertainty, what is Sigvora permitted to
+do?
+
+This gives RSG a clear role without allowing it to replace Sigvora's
+customer-request purpose.
 
 ---
 
-# 26. Governance Engine
+## 17. Governance
 
-Governance protects the boundary between:
+Governance separates:
 
-```text
-AI CAN RECOMMEND
-```
+> **What AI recommends**
 
-and:
+from:
 
-```text
-SYSTEM IS AUTHORISED TO ACT
-```
+> **What the system is authorised to do.**
 
-Inputs may include:
-
-```text
-Risk
-Evidence State
-Recommendation
-Uncertainty
-Requested Action
-User/System Permission
-Governance Policy
-```
-
-Outputs:
+Sigvora supports four initial governance outcomes:
 
 ```text
 ALLOW
-
 REVIEW
-
 ESCALATE
-
 ABSTAIN
 ```
 
----
+### ALLOW
 
-# 27. AI Cannot Authorise Itself
+A permitted low-risk workflow may continue.
 
-This architecture is prohibited:
+### REVIEW
 
-```text
-LLM
- ↓
-Recommendation
- ↓
-LLM decides recommendation is safe
- ↓
-Action
-```
+A human must confirm the recommendation.
 
-Sigvora requires:
+### ESCALATE
 
-```text
-LLM
- ↓
-Structured Recommendation
- ↓
-Schema Validation
- ↓
-Governance Engine
- ↓
-Authorisation Check
- ↓
-ALLOW / REVIEW / ESCALATE / ABSTAIN
-```
+The case requires specialist human handling.
 
-Governance is therefore an enforcement boundary outside generative
-reasoning.
+### ABSTAIN
+
+Sigvora does not have sufficient evidence or certainty to make a reliable
+recommendation.
 
 ---
 
-# 28. Human Review
+## 18. AI Cannot Authorise Itself
 
-Requests requiring human oversight enter the review workflow.
-
-Examples include:
+The following design is not acceptable:
 
 ```text
-High Risk
-
-Low Confidence
-
-Missing Evidence
-
-Conflicting Evidence
-
-Sensitive Customer Situation
-
-Restricted Action
+LLM → Recommendation → LLM says it is safe → Action
 ```
 
-The reviewer may:
+Sigvora instead uses:
 
-```text
-APPROVE
+```mermaid
+flowchart LR
+    A["AI Recommendation"]
+    --> B["Schema Validation"]
+    --> C["Governance Engine"]
 
-REJECT
+    D["Risk"] --> C
+    E["Evidence State"] --> C
+    F["Uncertainty"] --> C
+    G["Authority Rules"] --> C
 
-MODIFY
+    C --> H{"Decision"}
 
-REROUTE
-
-ESCALATE
-
-REQUEST MORE INFORMATION
+    H -->|ALLOW| I["Permitted Action"]
+    H -->|REVIEW| J["Human Review"]
+    H -->|ESCALATE| K["Specialist Handling"]
+    H -->|ABSTAIN| L["No Automated Decision"]
 ```
 
-Sigvora preserves both:
+This implements an important Sigvora principle:
 
-```text
-AI Recommendation
-```
-
-and:
-
-```text
-Human Decision
-```
-
-This allows later comparison and evaluation.
+> **AI capability does not equal operational authority.**
 
 ---
 
-# 29. SLA Engine
+## 19. Human-in-the-Loop
 
-SLA tracking connects intelligence to operational service delivery.
+Human review is part of the architecture rather than an emergency
+fallback added later.
 
-```text
-Request Received
-       ↓
-Request Type + Priority
-       ↓
-Applicable SLA Rule
-       ↓
-Deadline
-       ↓
-Time Remaining
-       ↓
-ON_TRACK / AT_RISK / BREACHED
-```
+A human may be required when:
 
-Basic deadline calculations are deterministic.
+- risk is high;
+- confidence is low;
+- evidence is missing;
+- evidence conflicts;
+- the situation is sensitive;
+- or governance requires approval.
 
-The LLM is not responsible for time arithmetic.
-
----
-
-# 30. Customer-Request Lifecycle
-
-The case state model should represent the actual customer-request
-workflow.
+A reviewer may:
 
 ```text
-RECEIVED
-    ↓
-TRIAGING
-    ↓
-ASSESSED
-    ↓
-EVIDENCE_READY
-    ↓
-RECOMMENDATION_READY
-    ↓
-GOVERNANCE_EVALUATED
-    ↓
-┌───────────────┬────────────────┬────────────────┐
-│               │                │                │
-▼               ▼                ▼                ▼
-ROUTED       IN_REVIEW        ESCALATED       ABSTAINED
-│               │                │                │
-└───────────────┴────────┬───────┴────────────────┘
-                         ↓
-                      RESOLVED
-                         ↓
-                       CLOSED
+Approve
+Reject
+Modify
+Reroute
+Escalate
+Request More Information
 ```
 
-State transitions must be explicit.
-
----
-
-# 31. Persistence Architecture
-
-The operational database is the source of truth for customer cases.
-
-It stores:
-
-```text
-CustomerRequest
-IntentClassification
-DecisionSignal
-RiskAssessment
-PriorityAssessment
-EvidenceReference
-Recommendation
-RoutingDecision
-GovernanceDecision
-HumanDecision
-SLAState
-AuditEvent
-```
-
-The retrieval index serves a different purpose.
-
-It supports search over organisational knowledge.
-
-It is not the source of truth for operational case state.
-
----
-
-# 32. Audit Architecture
-
-Important decisions create audit events.
-
-Examples:
-
-```text
-REQUEST_RECEIVED
-
-INTENT_CLASSIFIED
-
-SIGNAL_IDENTIFIED
-
-RISK_ASSESSED
-
-PRIORITY_ASSIGNED
-
-EVIDENCE_RETRIEVED
-
-RECOMMENDATION_GENERATED
-
-ROUTE_SELECTED
-
-GOVERNANCE_EVALUATED
-
-HUMAN_OVERRIDE
-
-SLA_ESCALATED
-
-CASE_RESOLVED
-```
-
-An audit event may contain:
-
-```text
-event_id
-case_id
-actor_type
-action
-reason
-previous_state
-new_state
-model_metadata
-policy_metadata
-timestamp
-```
-
----
-
-# 33. Decision Reconstruction
-
-For an important historical case, Sigvora should eventually be able to
-answer:
-
-```text
-What did the customer say?
-
-How was the request classified?
-
-Which DecisionSignals were identified?
-
-What risk was assigned?
-
-Why was that priority chosen?
-
-Which knowledge was retrieved?
-
-What did the AI recommend?
-
-Which evidence supported it?
-
-What was uncertain?
-
-Where was the case routed?
-
-What did governance permit?
-
-Did a human override the AI?
-
-What happened to the SLA?
-
-What was the final outcome?
-```
-
-This is what auditability means within Sigvora.
-
----
-
-# 34. Authentication and Authorisation
-
-The initial user model may include:
-
-```text
-AGENT
-REVIEWER
-ADMIN
-```
-
-Conceptually:
-
-### Agent
-
-Handles standard customer requests.
-
-### Reviewer
-
-Handles cases requiring elevated human review.
-
-### Admin
-
-Manages approved system configuration and organisational knowledge.
-
-Permissions should be enforced by the application.
-
-They should not be inferred by the LLM.
-
----
-
-# 35. Trust Boundaries
-
-Sigvora must treat the following as untrusted inputs:
-
-```text
-Customer Messages
-
-Uploaded / Retrieved Documents
-
-External Model Responses
-```
-
-They must remain separate from:
-
-```text
-System Instructions
-
-Application Permissions
-
-Governance Policies
-
-Authorisation Rules
-```
-
-This is important because customer text or retrieved content could contain
-instructions intended to manipulate an AI model.
-
----
-
-# 36. Safe AI Action Pattern
-
-Model output must not directly trigger privileged actions.
-
-Use:
-
-```text
-MODEL
-  ↓
-STRUCTURED PROPOSAL
-  ↓
-SCHEMA VALIDATION
-  ↓
-GOVERNANCE
-  ↓
-AUTHORISATION
-  ↓
-APPLICATION ACTION
-```
-
-This boundary is fundamental to Sigvora's Trustworthy AI design.
-
----
-
-# 37. Failure Behaviour
-
-Trustworthy AI includes behaviour when the system cannot make a reliable
+Sigvora preserves both the original AI recommendation and the human
 decision.
 
+This makes disagreement measurable rather than hiding it.
+
 ---
 
-## 37.1 Ambiguous Request
+## 20. SLA Tracking
 
-```text
-Request
- ↓
-Low Classification Confidence
- ↓
-UNKNOWN
- ↓
-Human Triage
+SLA tracking answers:
+
+> **How long does the organisation have to handle this request?**
+
+```mermaid
+flowchart LR
+    A["Request Received"]
+    --> B["Request Type + Priority"]
+    --> C["Applicable SLA Rule"]
+    --> D["Deadline"]
+    --> E{"Current State"}
+
+    E --> F["ON TRACK"]
+    E --> G["AT RISK"]
+    E --> H["BREACHED"]
 ```
 
+Deadline calculations are deterministic.
+
+An LLM is not needed to perform basic time arithmetic.
+
 ---
 
-## 37.2 Missing Organisational Evidence
+## 21. End-to-End Processing Sequence
 
-```text
-Policy-Dependent Question
-        ↓
-No Relevant Evidence
-        ↓
-Do Not Invent Policy
-        ↓
-REVIEW / ABSTAIN
+The following diagram shows what happens when Sigvora receives a customer
+request.
+
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant API as Sigvora API
+    participant DB as Case Store
+    participant INT as Request Intelligence
+    participant RAG as Knowledge Retrieval
+    participant GOV as Governance
+    actor Human as Agent / Reviewer
+
+    Customer->>API: Submit request
+    API->>API: Validate request
+    API->>DB: Save original request
+    DB-->>API: Return case ID
+
+    API->>INT: Understand request
+    INT-->>API: Intent + DecisionSignals
+
+    API->>API: Assess risk and priority
+
+    API->>RAG: Retrieve relevant knowledge
+    RAG-->>API: Evidence + provenance
+
+    API->>INT: Generate grounded recommendation
+    INT-->>API: Structured recommendation
+
+    API->>API: Determine routing
+    API->>GOV: Evaluate recommendation
+
+    GOV-->>API: ALLOW / REVIEW / ESCALATE / ABSTAIN
+
+    alt Human decision required
+        API->>Human: Present case and evidence
+        Human-->>API: Record decision
+    end
+
+    API->>DB: Save final state and audit events
 ```
 
+This sequence represents the core Sigvora product behaviour.
+
 ---
 
-## 37.3 Conflicting Evidence
+## 22. Data Model
 
-```text
-Evidence A
-     ↘
-     CONFLICT
-     ↗
-Evidence B
-     ↓
-Expose Conflict
-     ↓
-Human Review
+The customer request is the central domain object.
+
+```mermaid
+erDiagram
+    CUSTOMER_REQUEST ||--o| INTENT_CLASSIFICATION : has
+    CUSTOMER_REQUEST ||--o{ DECISION_SIGNAL : contains
+    CUSTOMER_REQUEST ||--o| RISK_ASSESSMENT : receives
+    CUSTOMER_REQUEST ||--o| PRIORITY_ASSESSMENT : receives
+    CUSTOMER_REQUEST ||--o{ EVIDENCE : uses
+    CUSTOMER_REQUEST ||--o| RECOMMENDATION : receives
+    CUSTOMER_REQUEST ||--o| ROUTING_DECISION : receives
+    CUSTOMER_REQUEST ||--o| GOVERNANCE_DECISION : receives
+    CUSTOMER_REQUEST ||--o| HUMAN_DECISION : may_require
+    CUSTOMER_REQUEST ||--o| SLA_STATE : tracks
+    CUSTOMER_REQUEST ||--o{ AUDIT_EVENT : generates
 ```
 
----
+### Why structure the data this way?
 
-## 37.4 AI Provider Failure
-
-```text
-Customer Request
-       ↓
-Persisted
-       ↓
-AI Provider Failure
-       ↓
-Failure Recorded
-       ↓
-Retry if Safe
-       OR
-Human Triage
-```
-
-The customer request remains available.
-
----
-
-## 37.5 Governance Failure
-
-If Sigvora cannot determine whether a sensitive action is authorised:
-
-```text
-DO NOT EXECUTE
-```
-
-The system fails closed.
-
----
-
-# 38. Idempotency
-
-Retries must not create duplicate operational effects.
-
-Sigvora should protect against duplicate:
-
-- customer cases;
-- recommendations;
-- routing transitions;
-- approvals;
-- SLA events;
-- and audit records.
-
-This becomes particularly important when external AI calls time out or are
-retried.
-
----
-
-# 39. Observability
-
-Observability should help answer product-relevant questions.
-
-Examples include:
-
-```text
-How many customer requests are being processed?
-
-How long does triage take?
-
-How often does classification fail?
-
-How often does Sigvora abstain?
-
-How often is no evidence found?
-
-Which routes receive the most requests?
-
-How often do humans override AI recommendations?
-
-How many requests approach SLA breach?
-
-How often do model calls fail?
-
-How long does retrieval take?
-```
-
-This keeps observability connected to customer-request operations.
-
----
-
-# 40. AI Traceability
-
-AI-generated outputs should retain metadata where available.
-
-```text
-provider
-model
-model_version
-prompt_version
-workflow_version
-retrieval_version
-timestamp
-latency
-status
-```
-
-This enables later evaluation and debugging.
-
-It does not imply perfect reproducibility of external models.
-
----
-
-# 41. Evaluation Architecture
-
-Evaluation is part of the architecture because Sigvora must prove its AI
-behaviour.
-
-```text
-Synthetic Labelled Customer Requests
-              ↓
-         SIGVORA PIPELINE
-              ↓
-       Structured Outputs
-              ↓
-       Evaluation Harness
-              ↓
-            Metrics
-              ↓
-      Experiment Evidence
-```
-
-Evaluation should be separated into layers.
-
----
-
-## 41.1 Request Understanding
-
-Measure:
-
-```text
-Intent Classification
-Category Classification
-```
-
-Possible metrics:
-
-```text
-Accuracy
-Precision
-Recall
-Macro F1
-```
-
----
-
-## 41.2 DecisionSignal Detection
-
-Measure whether important customer-request indicators are detected.
-
-```text
-Precision
-Recall
-F1
-```
-
----
-
-## 41.3 Risk and Priority
-
-Evaluate:
-
-```text
-Risk Classification
-Priority Assignment
-Critical Misclassification
-```
-
-Particular attention should be paid to dangerous under-prioritisation.
-
----
-
-## 41.4 Retrieval
-
-Evaluate independently:
-
-```text
-Precision@K
-Recall@K
-MRR
-```
-
-where appropriate.
-
----
-
-## 41.5 Grounding
-
-Evaluate whether recommendations are actually supported by retrieved
-evidence.
-
----
-
-## 41.6 Routing
-
-Measure correct first-time destination.
-
----
-
-## 41.7 Abstention
-
-Test whether Sigvora appropriately refuses to make unsupported decisions.
-
----
-
-## 41.8 Governance
-
-Test whether restricted actions are prevented.
-
----
-
-## 41.9 Human-AI Interaction
-
-Eventually measure:
-
-```text
-AI Recommendation Acceptance
-
-Human Override
-
-Human Escalation
-
-Reason for Override
-```
-
----
-
-## 41.10 End-to-End Evaluation
-
-Ultimately evaluate whether Sigvora transforms a request into an
-appropriate operational outcome.
-
----
-
-# 42. Technology Architecture
-
-The technology stack should support the product rather than define it.
-
-The proposed initial direction is:
-
-| Layer | Proposed Direction |
-|---|---|
-| Web Application | React + TypeScript |
-| Backend API | Python + FastAPI |
-| Data Validation | Typed Python schemas |
-| Operational Database | PostgreSQL |
-| Knowledge Retrieval | PostgreSQL vector capability or justified equivalent |
-| AI | Provider abstraction |
-| Embeddings | Provider/local abstraction |
-| Authentication | Standards-based authentication |
-| Testing | Unit + integration + AI evaluation |
-| Packaging | Docker |
-| CI/CD | GitHub Actions |
-| Observability | Structured logs, metrics and tracing where justified |
-
-These are proposed engineering choices.
-
-They are not claims that the capabilities have already been implemented.
-
----
-
-# 43. Why React
-
-Sigvora requires an interactive operational interface containing:
-
-- request queues;
-- case workspaces;
-- review controls;
-- evidence panels;
-- SLA states;
-- audit timelines;
-- and dynamic case updates.
-
-React with TypeScript is therefore an appropriate candidate for the
-frontend.
-
----
-
-# 44. Why FastAPI
-
-Sigvora's backend requires:
-
-- typed APIs;
-- structured validation;
-- asynchronous external calls;
-- Python AI ecosystem integration;
-- and automatically documented API contracts.
-
-FastAPI is therefore an appropriate candidate for the backend.
-
-The final choice should still be recorded as an architecture decision.
-
----
-
-# 45. Why PostgreSQL
-
-The core Sigvora data model is highly relational.
+We want to reconstruct a case later rather than storing only a final AI
+answer.
 
 For example:
 
 ```text
-CustomerRequest
-       ↓
-RiskAssessment
-       ↓
-Recommendation
-       ↓
-GovernanceDecision
-       ↓
-HumanDecision
+Customer Request
+      ↓
+What Sigvora understood
+      ↓
+Which signals it detected
+      ↓
+Why risk was assigned
+      ↓
+Which evidence was retrieved
+      ↓
+What AI recommended
+      ↓
+What governance allowed
+      ↓
+What the human decided
 ```
 
-Sigvora also requires transactional consistency and historical records.
-
-A relational database is therefore appropriate for the operational source
-of truth.
-
-Using PostgreSQL-compatible vector retrieval may additionally allow the
-portfolio to avoid unnecessary infrastructure during its initial stages.
+That structure supports explainability, auditing and evaluation.
 
 ---
 
-# 46. Why Not Start With Microservices
+## 23. Source of Truth
 
-The portfolio currently has no demonstrated requirement for independently
-scaled distributed services.
+The operational database is the authoritative source for customer-case
+state.
 
-Starting with microservices would add:
+The knowledge index serves a different purpose:
 
 ```text
-Network Complexity
-Deployment Complexity
-Distributed Failure
-Service Discovery
-Distributed Transactions
-Additional Observability
-Higher Cost
+Operational Database
+→ Customer cases and decisions
+→ SOURCE OF TRUTH
 ```
 
-without yet solving a demonstrated customer-request problem.
+```text
+Knowledge Index
+→ Searchable organisational knowledge
+→ RETRIEVAL STRUCTURE
+```
 
-Therefore:
-
-> **Modular monolith first. Extract services when evidence justifies it.**
+The retrieval index should not become the authoritative store for
+customer cases.
 
 ---
 
-# 47. Requirement Traceability
+## 24. Safe Failure
 
-| Requirement Area | Architecture Component |
+Trustworthy AI must define what happens when things go wrong.
+
+```mermaid
+flowchart TD
+    A["Customer Request"] --> B{"Problem?"}
+
+    B -->|"AI unavailable"| C["Preserve Case"]
+    B -->|"No evidence"| D["Do Not Invent Policy"]
+    B -->|"Conflicting evidence"| E["Expose Conflict"]
+    B -->|"Low confidence"| F["Mark Uncertainty"]
+    B -->|"Governance unavailable"| G["Fail Closed"]
+
+    C --> H["Human Triage / Safe Retry"]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+```
+
+Examples:
+
+**AI unavailable:** preserve the request and allow human handling.
+
+**No evidence:** do not fabricate organisational policy.
+
+**Conflicting evidence:** expose the conflict rather than choosing a
+source silently.
+
+**Low confidence:** allow abstention or human review.
+
+**Governance failure:** do not assume permission.
+
+---
+
+## 25. Auditability
+
+Sigvora should record important events such as:
+
+```text
+Request Received
+Intent Classified
+DecisionSignal Identified
+Risk Assessed
+Priority Assigned
+Evidence Retrieved
+Recommendation Generated
+Routing Selected
+Governance Evaluated
+Human Override
+SLA Escalated
+Case Resolved
+```
+
+The goal is to answer:
+
+> **How did Sigvora reach this decision?**
+
+An audit trail should therefore preserve relevant system, human, AI,
+evidence and policy information.
+
+---
+
+## 26. Security Boundary
+
+Customer messages, retrieved documents and model outputs must be treated
+as untrusted input.
+
+They must not be able to redefine:
+
+```text
+System Instructions
+Permissions
+Governance Rules
+Authorisation Rules
+```
+
+A generated recommendation should therefore follow:
+
+```mermaid
+flowchart LR
+    A["Model Output"]
+    --> B["Structured Schema"]
+    --> C["Validation"]
+    --> D["Governance"]
+    --> E["Authorisation"]
+    --> F["Permitted Application Action"]
+```
+
+The LLM does not receive unrestricted authority over application actions.
+
+---
+
+## 27. Evaluation Is Part of the Architecture
+
+Sigvora cannot claim to be trustworthy simply because the application
+works.
+
+Its behaviour must eventually be measured.
+
+```mermaid
+flowchart LR
+    A["Labelled Synthetic<br/>Customer Requests"]
+    --> B["Sigvora Pipeline"]
+    --> C["Structured Results"]
+    --> D["Evaluation Harness"]
+    --> E["Metrics"]
+    --> F["Experiment Evidence"]
+```
+
+Evaluation should cover:
+
+| Capability | Example Measure |
 |---|---|
-| Request ingestion | Request Management |
-| Intent classification | Request Understanding |
-| Decision signals | DecisionSignal Extraction |
-| Risk | Risk Assessment |
-| Priority | Priority Assessment |
-| Organisational knowledge | Knowledge Management |
-| RAG | Retrieval Pipeline |
-| Recommendation | Recommendation Engine |
-| Routing | Routing Engine |
-| Governance | Governance Engine |
-| Uncertainty / Abstention | AI + Governance |
-| Human review | Review Workflow |
-| SLA | SLA Engine |
-| Audit | Audit Subsystem |
-| Security | Identity + Trust Boundaries |
-| Reliability | Workflow + Infrastructure |
-| Observability | Observability Layer |
-| Evaluation | Evaluation Harness |
+| Intent classification | Macro F1 |
+| DecisionSignal detection | Precision / Recall / F1 |
+| Risk assessment | Classification performance |
+| Priority | Correct priority rate |
+| Routing | First-time routing accuracy |
+| Retrieval | Precision@K / Recall@K |
+| Grounding | Evidence-supported recommendation rate |
+| Abstention | Appropriate abstention rate |
+| Governance | Policy-compliance rate |
+| Human oversight | Override / escalation rate |
+
+Actual thresholds will be defined in `EVALUATION_DESIGN.md`.
 
 ---
 
-# 48. Complete Sigvora Decision Path
+## 28. Proposed Technology Direction
 
-The final architecture can be summarised as:
+Technology should support the architecture rather than define the
+product.
 
-```text
-1. Customer submits request
-                ↓
-2. Sigvora validates request
-                ↓
-3. Original request is persisted
-                ↓
-4. Intent/category are determined
-                ↓
-5. DecisionSignals are extracted
-                ↓
-6. Risk is assessed
-                ↓
-7. Priority is assigned
-                ↓
-8. Relevant organisational knowledge is retrieved
-                ↓
-9. Evidence relevance is assessed
-                ↓
-10. Evidence-grounded recommendation is generated
-                ↓
-11. Operational destination is determined
-                ↓
-12. Governance evaluates permitted authority
-                ↓
-13. ALLOW / REVIEW / ESCALATE / ABSTAIN
-                ↓
-14. Human review occurs where required
-                ↓
-15. Permitted workflow transition occurs
-                ↓
-16. SLA state is monitored
-                ↓
-17. Decision history is audited
-                ↓
-18. Outcome and feedback are retained
-                ↓
-19. Structured results become evaluation evidence
+| Layer | Proposed Direction | Why |
+|---|---|---|
+| Frontend | React + TypeScript | Interactive queue, case and review interfaces |
+| Backend | Python + FastAPI | Typed APIs and strong AI ecosystem |
+| Operational Data | PostgreSQL | Relational case and decision history |
+| Retrieval | PostgreSQL vector capability or justified equivalent | Keep initial infrastructure manageable |
+| AI | Provider abstraction | Avoid unnecessary dependency on one model |
+| Testing | Unit + Integration + AI Evaluation | Test deterministic and AI behaviour separately |
+| Packaging | Docker | Reproducible environments |
+| CI/CD | GitHub Actions | Automated repository validation |
+| Observability | Structured logs + metrics | Inspect application and AI behaviour |
+
+These are proposed choices.
+
+They are not claims that the technologies have already been implemented.
+
+---
+
+## 29. Architecture Invariants
+
+The following rules protect Sigvora from architectural drift.
+
+1. The original customer request is preserved.
+2. Sentiment alone cannot determine risk or priority.
+3. AI inference is not presented as customer fact.
+4. Policy-dependent recommendations require relevant evidence.
+5. Missing evidence must not result in fabricated policy.
+6. High AI confidence does not grant authority.
+7. AI cannot bypass governance.
+8. Human overrides preserve the original AI recommendation.
+9. AI failure must not lose the customer request.
+10. Sensitive actions fail safely when authority cannot be established.
+11. Trustworthy AI claims require evaluation evidence.
+12. Every major component must support the customer-request decision lifecycle.
+
+---
+
+## 30. Architecture Validation Scenario
+
+Consider:
+
+> "My card was stolen yesterday and now there are three transactions
+> totalling £650 that I don't recognise."
+
+Sigvora should conceptually process it as:
+
+```mermaid
+flowchart TD
+    A["Customer Request<br/>Stolen card + unknown transactions"]
+    --> B["Intent<br/>Potential Fraud / Card Security"]
+
+    B --> C["DecisionSignals<br/>STOLEN_CARD<br/>UNRECOGNISED_TRANSACTION<br/>£650 exposure"]
+
+    C --> D["Risk<br/>HIGH"]
+
+    D --> E["Priority<br/>P1"]
+
+    E --> F["Retrieve Approved<br/>Fraud / Card Procedure"]
+
+    F --> G["Evidence-Grounded<br/>Recommendation"]
+
+    G --> H["Route<br/>Fraud / Card Security"]
+
+    H --> I["Governance<br/>ESCALATE"]
+
+    I --> J["Human / Specialist<br/>Handling"]
+
+    J --> K["SLA + Audit"]
 ```
 
-This is the architectural backbone of Sigvora.
+This scenario provides a simple architecture test:
+
+> **If a proposed Sigvora component does not meaningfully contribute to
+> this customer-request decision process, why is it in the core
+> architecture?**
 
 ---
 
-# 49. Architecture Invariants
-
-These rules must remain true as Sigvora evolves.
-
-### INV-01
-
-The original customer request is preserved.
-
-### INV-02
-
-Customer sentiment alone cannot determine operational risk.
-
-### INV-03
-
-A policy-dependent recommendation cannot fabricate organisational policy
-when evidence is unavailable.
-
-### INV-04
-
-AI inference must not be silently represented as customer fact.
-
-### INV-05
-
-High model confidence does not grant operational authority.
-
-### INV-06
-
-The recommendation model cannot bypass governance.
-
-### INV-07
-
-Sensitive actions require appropriate authorisation.
-
-### INV-08
-
-Human overrides preserve the original AI recommendation.
-
-### INV-09
-
-AI-provider failure does not lose the customer request.
-
-### INV-10
-
-Retrieved documents and customer text are treated as untrusted input.
-
-### INV-11
-
-Operational customer-case state has an authoritative persistent source.
-
-### INV-12
-
-Trustworthy AI claims require evaluation evidence.
-
-### INV-13
-
-Every major Sigvora capability must support the customer-request
-decision lifecycle.
-
----
-
-# 50. Architecture Risks
-
-| Risk | Response |
-|---|---|
-| Incorrect intent | Confidence + UNKNOWN + review |
-| Missed high-risk signal | Signal evaluation + human escalation |
-| Incorrect priority | Explainable rules + evaluation |
-| Poor retrieval | Retrieval evaluation |
-| Hallucinated policy | Evidence requirement |
-| Missing evidence | Abstain / review |
-| Conflicting evidence | Expose conflict |
-| Prompt injection | Trust boundaries |
-| Excessive AI authority | Governance enforcement |
-| AI-provider outage | Persist + graceful degradation |
-| Duplicate processing | Idempotency |
-| Human automation bias | Visible evidence and uncertainty |
-| Lost traceability | Structured audit |
-| Premature complexity | Modular monolith |
-
----
-
-# 51. Architecture Validation Scenario
-
-A design should be tested against a realistic Sigvora request.
-
-Customer:
-
-```text
-"My card was stolen yesterday.
-
-I've checked my account today and there are three
-transactions totalling £650 that I don't recognise."
-```
-
-Expected architectural journey:
-
-```text
-CustomerRequest
-        ↓
-IntentClassification
-Potential Fraud / Card Security
-        ↓
-DecisionSignals
-STOLEN_CARD
-UNRECOGNISED_TRANSACTIONS
-FINANCIAL_EXPOSURE = £650
-        ↓
-RiskAssessment
-HIGH
-        ↓
-PriorityAssessment
-P1
-        ↓
-Knowledge Retrieval
-Relevant approved fraud/card-security procedure
-        ↓
-Evidence
-Source and relevant sections retained
-        ↓
-Recommendation
-Urgent specialist escalation
-        ↓
-Routing
-Fraud / Card Security
-        ↓
-Governance
-ESCALATE
-        ↓
-Human Handling
-Required
-        ↓
-SLA
-High-priority service target
-        ↓
-Audit
-Complete decision chain retained
-```
-
-If an architectural component cannot explain its role in this scenario,
-its inclusion in the core system should be challenged.
-
----
-
-# 52. Architecture Definition of Done
-
-This architecture is ready to guide implementation when it clearly
-defines:
-
-- the customer-request lifecycle;
-- product boundaries;
-- request understanding;
-- DecisionSignals;
-- risk and priority;
-- RAG and evidence;
-- recommendations;
-- routing;
-- RSG's supporting role;
-- governance;
-- human oversight;
-- SLA handling;
-- persistence;
-- auditability;
-- security boundaries;
-- failure behaviour;
-- observability;
-- evaluation;
-- and requirement traceability.
-
----
-
-# 53. Current Evidence Status
+## 31. Architecture Status
 
 This document describes the **target architecture**.
 
-At this stage it must not be interpreted as evidence that:
+It does not claim that:
 
-- the complete application exists;
-- classification accuracy has been established;
-- retrieval quality has been validated;
-- governance effectiveness has been experimentally demonstrated;
-- SLA improvements have been measured;
-- financial-services compliance has been certified;
-- or Sigvora has been tested at enterprise scale.
+- every component has been implemented;
+- the AI has achieved acceptable accuracy;
+- RAG quality has been validated;
+- governance effectiveness has been proven;
+- Sigvora is certified for financial-services production;
+- or the platform has been tested at enterprise scale.
 
-Those claims require implementation and empirical evidence.
-
-The portfolio will distinguish clearly between:
+The portfolio will distinguish between:
 
 ```text
-DESIGNED
-
-IMPLEMENTED
-
-TESTED
-
-EVALUATED
-
-DEPLOYED
+DESIGNED → IMPLEMENTED → TESTED → EVALUATED → DEPLOYED
 ```
+
+This prevents design intentions from being presented as implementation
+evidence.
 
 ---
 
-# 54. Next Design Artefact
+## 32. Next Document
 
-The next document is:
+The next design document is:
 
 `docs/AI_DESIGN.md`
 
-It will define how AI specifically supports Sigvora's customer-request
-workflow, including:
+It will answer a narrower question:
+
+> **How should AI and RAG perform their specific responsibilities inside
+> the Sigvora customer-request decision process?**
+
+It will cover:
 
 - intent classification;
 - DecisionSignal extraction;
 - structured AI outputs;
-- confidence and uncertainty;
-- RAG query construction;
-- document chunking;
-- embeddings;
-- retrieval;
-- reranking;
-- evidence packaging;
-- grounded recommendation generation;
+- uncertainty;
+- RAG retrieval;
+- evidence grounding;
+- recommendation generation;
 - abstention;
 - prompt boundaries;
-- prompt-injection defence;
 - model/provider abstraction;
-- model and prompt versioning;
-- fallback behaviour;
+- AI failure handling;
 - AI observability;
-- and AI evaluation.
+- and evaluation hooks.
 
-The AI subsystem must remain subordinate to the Sigvora customer-request
-decision process defined in this architecture.
+AI design will remain subordinate to the Sigvora product architecture
+defined here.
